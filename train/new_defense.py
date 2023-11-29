@@ -42,8 +42,8 @@ class Stage1Trainer(object):
 
         os.makedirs(os.path.join(self.args['result_path'], self.args['exp_name'], 'wandb'), exist_ok = True)
 
-        wandb.init(name = name, project = 'defense-ai', entity = self.args['wandb_entity'],
-                    dir = os.path.join(self.args['result_path'], name),
+        wandb.init(name = self.args['exp_name'], project = 'defense-ai', entity = self.args['wandb_entity'],
+                    dir = os.path.join(self.args['result_path'], self.args['exp_name']),
                     config = self.args, config_exclude_keys = self.args['wandb_exclude'])
 
     def build_dataset(self) -> None:

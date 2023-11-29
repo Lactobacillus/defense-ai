@@ -20,10 +20,10 @@ args['batch_size'] = 4
 args['lr'] = 1e-4
 args['epoch'] = 100
 
-args['use_wandb'] = False
+args['use_wandb'] = True
 args['wandb_entity'] = 'defense'
 args['wandb_exclude'] = ['use_wandb', 'wandb_entity', 'wandb_exclude', 'device', 'debug', 'result_path']
 
 args['device'] = 'cuda'
-args['debug'] = True
+args['debug'] = False
 args['seed'] = None
