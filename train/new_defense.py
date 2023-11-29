@@ -1,0 +1,124 @@
+import os
+import sys
+import timeit
+import wandb
+import numpy as np
+from tqdm import tqdm
+from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
+from torch.cuda.amp import GradScaler, autocast
+
+from torchvision.models import resnet50, ResNet50_Weights
+from transformers import AutoImageProcessor, ResNetForImageClassification, ResNetModel
+
+from data.dataset import VideoPretrainData
+from train.util import LossAccumulator
+
+
+class PreTrainer(object):
+
+    def __init__(self,
+            args: Dict[str, Any]) -> None:
+
+        self.args = args
+        self.result_root = os.path.join(args['result_path'], args['exp_name'])
+        os.makedirs(self.result_root, exist_ok = True)
+
+        self.build_model()
+        self.build_dataset()
+
+        if args['use_wandb'] and not args['debug']:
+
+            self.use_wandb = True
+            self.build_wandb()
+
+        else: self.use_wandb = False
+
+    def build_wandb(self) -> None:
+
+        os.makedirs(os.path.join(self.args['result_path'], self.args['exp_name'], 'wandb'), exist_ok = True)
+
+        wandb.init(name = name, project = 'defense-ai', entity = self.args['wandb_entity'],
+                    dir = os.path.join(self.args['result_path'], name),
+                    config = self.args, config_exclude_keys = self.args['wandb_exclude'])
+
+    def build_dataset(self) -> None:
+
+        self.train_data = VideoPretrainData(self.args['data_path'], self.args['frame_length'])
+        self.test_data = VideoPretrainData(self.args['data_path'], self.args['frame_length'])
+
+    def build_model(self) -> None:
+
+        self.processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50').to('cuda')
+        self.model = ResNetModel.from_pretrained('microsoft/resnet-50').to('cuda')
+        self.model = torch.compile(self.model)
+
+    def train(self,
+            dataset: str = 'train',
+            verbose: bool = False) -> None:
+
+        self.model.train()
+        self.model = self.model.to('cuda')
+
+        match dataset:
+
+            case 'train': dset = self.train_data
+            case 'test': dset = self.test_data
+
+        train_loader = DataLoader(dataset = dset,
+            batch_size = self.args['batch_size'],
+            shuffle = True,
+            drop_last = False,
+            num_workers = 4,
+            pin_memory = True)
+        optimizer = torch.optim.AdamW(list(self.model.parameters()), lr = self.args['lr'])
+        grad_scaler = GradScaler()
+
+        for epoch in range(self.args['epoch']):
+
+            self.model.train()
+            epoch_start = timeit.default_timer()
+
+            for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
+
+                video = [[v for v in vv] for vv in batch['vid'].numpy()]
+
+                with autocast(dtype = torch.bfloat16):
+
+                    inputs = processor(video, return_tensors = 'pt')
+                    logits = model(**inputs).logits
+
+                optimizer.zero_grad(set_to_none = True)
+                grad_scaler.scale(loss).backward()
+                grad_scaler.step(optimizer)
+                grad_scaler.update()
+
+                if self.use_wandb:
+
+                    wandb.log({'train/pretrain': loss.item()})
+
+            epoch_end = timeit.default_timer()
+
+            print('[info] Epoch {} (Total: {}), elapsed time: {:.4f}'.format(epoch, self.args['epoch'], epoch_end - epoch_start))
+
+        else:
+
+            print('[info] Train finished')
+
+    def save_checkpoint(self,
+            filename: Optional[str] = None) -> None:
+
+        if not filename: filename = 'checkpoint'
+
+        checkpoint = {'model': self.model.cpu().state_dict(),
+                    'args': self.args}
+
+        torch.save(checkpoint, os.path.join(self.result_root, '{}.pkl'.format(filename)))
+
+    def __del__(self) -> None:
+
+        wandb.finish(0)

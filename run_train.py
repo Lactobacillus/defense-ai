@@ -13,7 +13,7 @@ def main(args: Dict[str, Any],
         case 1:
 
             # Pretraine VideoMAE
-            from train.defense import PreTrainer as Trainer
+            from train.new_defense import PreTrainer as Trainer
 
             trainer = Trainer(args)
             trainer.train('train')
