@@ -54,7 +54,7 @@ class PreTrainer(object):
     def build_model(self) -> None:
 
         self.processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base")
-        self.model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base").to('cuda')
+        self.model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base")
         # self.peft_conf = LoraConfig(inference_mode = False,
         #                     r = 8,
         #                     lora_alpha = 32,
@@ -63,6 +63,7 @@ class PreTrainer(object):
         #                     target_modules = ['query', 'key', 'value'])
         # self.model = get_peft_model(self.model, self.peft_config)
         # self.model.print_trainable_parameters()
+        self.model = torch.compile(self.model, fullgraph = self.args['full_graph']).to('cuda')
 
     def train(self,
             dataset: str = 'train',
@@ -99,10 +100,10 @@ class PreTrainer(object):
 
                 with autocast(dtype = torch.bfloat16):
 
-                    inputs = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
-                    bool_masked_pos = torch.randint(0, 2, (1, self.args['frame_length'])).bool()
+                    pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
+                    bool_masked_pos = torch.randint(0, 2, (self.args['batch_size'], self.args['frame_length'])).bool()
 
-                    outputs = self.model(vid, bool_masked_pos = bool_masked_pos)
+                    outputs = self.model(pixel, bool_masked_pos = bool_masked_pos)
                     loss = outputs.loss
 
                 optimizer.zero_grad(set_to_none = True)
