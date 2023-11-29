@@ -155,3 +155,31 @@ class Preprocess:
             print(f'[LOG] 성공적으로 얼굴 비디오를 생성했습니다. 저장 위치 : {self.dst_video_path}')
         else:
             print('[LOG] 얼굴 비디오 생성에 실패하였습니다.')
+    
+    
+    
+    def RGB_mean_var(folder_path, frame_index=0):
+        
+        mean_squared_len = []
+        mean_len = []
+        total_length = 0
+        file_list = os.listdir(folder_path)
+        
+        for file_name in file_list:
+            file_path = os.path.join(folder_path, file_name)
+            cap = cv2.VideoCapture(file_path)
+            length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+            ret, frame = cap.read()
+            cap.release()
+            
+            m = frame.mean(axis=(0, 1))
+            mean_squared_len.append(m**2*length)
+            mean_len.append(m*length)
+            total_length += length
+            
+        MEAN = np.array(mean_len).sum(axis=0) / total_length
+        VAR = (np.array(mean_squared_len).sum(axis=0) / total_length) - (MEAN**2)
+        
+        
+        return MEAN, VAR
