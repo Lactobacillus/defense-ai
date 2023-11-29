@@ -94,14 +94,13 @@ class PreTrainer(object):
 
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
-                batch = {k: batch[k].to('cuda') for k in batch}
+                # batch = {k: batch[k].to('cuda') for k in batch}
+                vid = [v for v in batch['vid'].numpy()]
 
                 with autocast(dtype = torch.bfloat16):
 
-                    raise NotImplementedError
-
-                    inputs = processor(video, return_tensors = 'pt').pixel_values.to('cuda')
-                    bool_masked_pos = torch.randint(0, 2, (1, seq_length)).bool()
+                    inputs = self.processor(vid, return_tensors = 'pt').pixel_values.to('cuda')
+                    bool_masked_pos = torch.randint(0, 2, (1, self.args['frame_length'])).bool()
 
                     outputs = self.model(pixel_values, bool_masked_pos = bool_masked_pos)
                     loss = outputs.loss
