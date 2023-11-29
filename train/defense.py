@@ -80,7 +80,7 @@ class PreTrainer(object):
             batch_size = self.args['batch_size'],
             shuffle = True,
             drop_last = False,
-            num_workers = 2,
+            num_workers = 4,
             pin_memory = True)
         optimizer = torch.optim.AdamW(list(self.model.parameters()), lr = self.args['lr'])
         grad_scaler = GradScaler()
@@ -95,7 +95,7 @@ class PreTrainer(object):
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
                 # batch = {k: batch[k].to('cuda') for k in batch}
-                vid = batch['vid'].to('cuda')
+                vid = batch['vid'].squeeze().to('cuda')
 
                 with autocast(dtype = torch.bfloat16):
 
