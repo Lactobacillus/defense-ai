@@ -8,7 +8,7 @@ from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable, Itera
 
 def video2numpy(filepath: str) -> np.ndarray:
 
-    cap = cv2.VideoCapture(train['path'][0])
+    cap = cv2.VideoCapture(filepath)
     frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
