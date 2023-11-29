@@ -52,7 +52,7 @@ class PreTrainer(object):
 
     def build_model(self) -> None:
 
-        self.processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base").to('cuda')
+        self.processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base")
         self.model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base").to('cuda')
         # self.peft_conf = LoraConfig(inference_mode = False,
         #                     r = 8,
