@@ -85,7 +85,7 @@ class PreTrainer(object):
         optimizer = torch.optim.AdamW(list(self.model.parameters()), lr = self.args['lr'])
         grad_scaler = GradScaler()
         num_patches_per_frame = (self.model.config.image_size // self.model.config.patch_size) ** 2
-        seq_length = (num_frames // self.model.config.tubelet_size) * num_patches_per_frame
+        seq_length = (self.args['frame_length'] // self.model.config.tubelet_size) * num_patches_per_frame
 
         for epoch in range(self.args['epoch']):
 

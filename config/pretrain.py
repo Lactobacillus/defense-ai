@@ -16,7 +16,9 @@ args['result_path'] = os.path.join(home, 'temporary/')
 args['data_path'] = '/mnt/elice/dataset/train/real'
 args['frame_length'] = 16
 args['batch_size'] = 4
+
 args['lr'] = 1e-4
+args['epoch'] = 100
 
 args['use_wandb'] = False
 args['wandb_entity'] = 'defense'

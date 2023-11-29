@@ -30,7 +30,7 @@ class VideoPretrainData(Dataset):
             idx: int) -> Dict[str, Any]:
 
         fn = self.fn_list[idx]
-        vid = self.video2numpy(fn)
+        vid = self.video2numpy(os.path.join(self.data_path, fn))
 
         start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
         end = start + self.frame_length
@@ -41,7 +41,7 @@ class VideoPretrainData(Dataset):
     def video2numpy(self,
             filepath: str) -> np.ndarray:
 
-        cap = cv2.VideoCapture(train['path'][0])
+        cap = cv2.VideoCapture(filepath)
         frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -58,4 +58,4 @@ class VideoPretrainData(Dataset):
 
         cap.release()
 
-    return buf
+        return buf
