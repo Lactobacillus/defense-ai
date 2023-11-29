@@ -95,11 +95,11 @@ class PreTrainer(object):
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
                 # batch = {k: batch[k].to('cuda') for k in batch}
-                vid = batch['vid'].squeeze().to('cuda')
+                video = [[v for v in vv] for vv in batch['vid'].numpy()]
 
                 with autocast(dtype = torch.bfloat16):
 
-                    # inputs = self.processor(vid, return_tensors = 'pt').pixel_values.to('cuda')
+                    inputs = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
                     bool_masked_pos = torch.randint(0, 2, (1, self.args['frame_length'])).bool()
 
                     outputs = self.model(vid, bool_masked_pos = bool_masked_pos)

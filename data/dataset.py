@@ -23,8 +23,6 @@ class VideoPretrainData(Dataset):
         self.frame_length = frame_length
         self.fn_list = os.listdir(data_path)
 
-        self.processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base")
-
     def __len__(self) -> int:
 
         return len(self.fn_list)
@@ -37,8 +35,7 @@ class VideoPretrainData(Dataset):
 
         start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
         end = start + self.frame_length
-        cut = [v for v in np.transpose(vid[start:end, ...], (0, 3, 1, 2))]
-        cut = self.processor(cut, return_tensors = 'pt').pixel_values
+        cut = np.transpose(vid[start:end, ...], (0, 3, 1, 2))
 
         return {'vid': cut}
 
