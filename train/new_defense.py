@@ -12,6 +12,8 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torch.cuda.amp import GradScaler, autocast
 
+from transformers import AutoImageProcessor
+
 from model.model import CustomResNet50
 from data.dataset import VideoPretrainData
 from train.util import LossAccumulator
@@ -52,8 +54,11 @@ class PreTrainer(object):
     def build_model(self) -> None:
 
         self.processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50')
-        self.model = CustomResNet50.to('cuda')
+        self.model = CustomResNet50().to('cuda')
         self.model = torch.compile(self.model)
+
+        self.aggr = Aggregator().to('cuda')
+        self.aggr = torch.compile(self.aggr)
 
     def train(self,
             dataset: str = 'train',
@@ -61,6 +66,8 @@ class PreTrainer(object):
 
         self.model.train()
         self.model = self.model.to('cuda')
+        self.aggr.train()
+        self.aggr = self.aggr.to('cuda')
 
         match dataset:
 
@@ -91,12 +98,10 @@ class PreTrainer(object):
 
                     pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
                     pred = self.model(pixel) # (bs * fl, dim, w, h)
+                    bsfl, d, w, h = pred.size()
+                    pred = pred.view(bs, fl, d, w, h)
 
-
-                    # bsfl, d, w, h = pred.size()
-                    # pred = pred.view(bs, fl, d, w, h)
-
-
+                    pred = self.aggr(pred)
 
                 optimizer.zero_grad(set_to_none = True)
                 grad_scaler.scale(loss).backward()

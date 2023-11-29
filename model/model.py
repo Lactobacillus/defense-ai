@@ -47,3 +47,24 @@ class CustomResNet50(nn.Module):
             x = torch.flatten(x, 1)
 
         return x
+
+
+class Aggregator(nn.Module):
+
+    def __init__(self,
+            pool: bool = False) -> None:
+
+        super(Aggregator, self).__init__()
+
+        self.linear = nn.Linear(2048, 64)
+        self.conv1 = nn.Conv3d(64, 16, 3, 2)
+
+    def forward(self,
+            x: torch.Tensor) -> torch.Tensor:
+
+        x = torch.transpose(x, (0, 1, 3, 4, 2))
+        x = F.leaky_relu(self.linear(x)) # (bs, fl, w, h, d)
+        x = torch.transpose(x, (0, 4, 1, 2, 3)) # (bs, d, fl, w, h)
+        x = F.leaky_relu(self,conv1(x))
+
+        return x
