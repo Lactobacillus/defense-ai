@@ -53,9 +53,9 @@ class PreTrainer(object):
 
     def build_model(self) -> None:
 
-        self.processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50').to('cuda')
+        self.processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50')
         self.model = ResNetModel.from_pretrained('microsoft/resnet-50').to('cuda')
-        self.model = torch.compile(self.model)
+        # self.model = torch.compile(self.model)
 
     def train(self,
             dataset: str = 'train',
@@ -85,12 +85,15 @@ class PreTrainer(object):
 
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
-                video = [[v for v in vv] for vv in batch['vid'].numpy()]
+                # video = [[v for v in vv] for vv in batch['vid'].numpy()]
+                video = batch['vid']
+                bs, fl, _, w, h = video.size()
+                video = video.view(bs * fl, 3, w, h)
 
                 with autocast(dtype = torch.bfloat16):
 
-                    inputs = processor(video, return_tensors = 'pt')
-                    logits = model(**inputs).logits
+                    pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
+                    logits = self.model(pixel).logits
 
                 optimizer.zero_grad(set_to_none = True)
                 grad_scaler.scale(loss).backward()
