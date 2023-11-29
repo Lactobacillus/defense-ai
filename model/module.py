@@ -132,7 +132,7 @@ class ResBlock3d(nn.Module):
 
         if in_ch != out_ch:
 
-            self.conv3 = nn.conv1d(in_ch, out_ch, kernel_size = 1, padding = 0)
+            self.conv3 = nn.Conv3d(in_ch, out_ch, kernel_size = 1, padding = 0)
 
     def forward(self,
             x: torch.Tensor) -> torch.Tensor:

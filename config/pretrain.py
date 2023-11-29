@@ -10,7 +10,7 @@ from pathlib import Path
 home = str(Path.home())
 args = dict()
 
-args['exp_name'] = 'pretrain'
+args['exp_name'] = 'finetune'
 args['result_path'] = os.path.join(home, 'temporary/')
 
 args['data_path'] = '/mnt/elice/dataset/train/real'

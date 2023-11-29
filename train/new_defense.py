@@ -19,7 +19,7 @@ from data.dataset import VideoPretrainData
 from train.util import LossAccumulator
 
 
-class PreTrainer(object):
+class Stage1Trainer(object):
 
     def __init__(self,
             args: Dict[str, Any]) -> None:
@@ -97,11 +97,14 @@ class PreTrainer(object):
                 with autocast(dtype = torch.bfloat16):
 
                     pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
-                    pred = self.model(pixel) # (bs * fl, dim, w, h)
-                    bsfl, d, w, h = pred.size()
-                    pred = pred.view(bs, fl, d, w, h)
+                    emb = self.model(pixel) # (bs * fl, dim, w, h)
+                    bsfl, d, w, h = emb.size()
+                    emb = emb.view(bs, fl, d, w, h)
 
-                    pred = self.aggr(pred)
+                    logit = self.aggr(pred)
+                    prob = torch.sigmoid(logit)
+
+                    loss = F.binary_cross_entropy(prob, batch['gt'].to('cuda'))
 
                 optimizer.zero_grad(set_to_none = True)
                 grad_scaler.scale(loss).backward()
