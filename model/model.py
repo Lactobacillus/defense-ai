@@ -57,8 +57,8 @@ class Aggregator(nn.Module):
         super(Aggregator, self).__init__()
 
         self.linear = nn.Linear(2048, 64)
-        self.layer1 = md.ResBlock3d(64, 32, 3)
-        self.layer2 = md.ResBlock3d(32, 16, 3)
+        self.layer1 = md.ResBlock3d(64, 32)
+        self.layer2 = md.ResBlock3d(32, 16)
 
     def forward(self,
             x: torch.Tensor) -> torch.Tensor:

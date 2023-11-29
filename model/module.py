@@ -122,11 +122,17 @@ class ResBlock3d(nn.Module):
 
         super(ResBlock3d, self).__init__()
 
-        # Define the first convolutional layer
+        self.in_ch = in_ch
+        self.out_ch = out_ch
+
         self.conv1 = nn.Conv3d(in_ch, in_ch, kernel_size = 3, padding = 1)
         self.bn1 = nn.BatchNorm3d(in_ch)
         self.conv2 = nn.Conv3d(in_ch, in_ch, kernel_size = 3, padding = 1)
         self.bn2 = nn.BatchNorm3d(in_ch)
+
+        if in_ch != out_ch:
+
+            self.conv3 = nn.conv1d(in_ch, out_ch, kernel_size = 1, padding = 0)
 
     def forward(self,
             x: torch.Tensor) -> torch.Tensor:
@@ -136,5 +142,9 @@ class ResBlock3d(nn.Module):
         out = self.bn2(self.conv2(out))
         out = out + identity
         out = F.relu(out)
+
+        if self.in_ch != self.out_ch:
+
+            out = self.conv3(out)
 
         return out
