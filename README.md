@@ -1,1 +1,5 @@
-# defense-ai
+# requirements
+
+```shell
+pip install insightface
+```
