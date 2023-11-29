@@ -10,7 +10,7 @@ from data.preprocess import Preprocess
 
 def main(args: Dict[str, Any]) -> None:
     preprocess = Preprocess()
-    preprocess.make_face_video(dst_video_path=args['out_path'])
+    preprocess.make_face_video()
 
 if __name__ == '__main__':
 
