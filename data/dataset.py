@@ -71,26 +71,26 @@ class VideoStage1Data(Dataset):
         self.data_path = data_path
         self.frame_length = frame_length
 
-        self.real_list = os.listdir(os.path.join(data_path, split, 'real'))
-        self.fake_list = os.listdir(os.path.join(data_path, split, 'fake'))
-        self.pair = [(fn, 1) for fn in real_list]
-        self.pair = self.pair + [(fn, 0) for fn in real_list]
+        real_list = os.listdir(os.path.join(data_path, split, 'real'))
+        fake_list = os.listdir(os.path.join(data_path, split, 'fake'))
+        self.pair = [(os.path.join(data_path, split, 'real', fn), 1) for fn in real_list]
+        self.pair = self.pair + [(os.path.join(data_path, split, 'fake', fn), 0) for fn in fake_list]
 
     def __len__(self) -> int:
 
-        return len(self.fn_list)
+        return len(self.pair)
 
     def __getitem__(self,
             idx: int) -> Dict[str, Any]:
 
-        fn = self.fn_list[idx]
-        vid = self.video2numpy(os.path.join(self.data_path, fn))
+        fn, label = self.pair[idx]
+        vid = self.video2numpy(fn)
 
         start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
         end = start + self.frame_length
         cut = np.transpose(vid[start:end, ...], (0, 3, 1, 2))
 
-        return {'vid': cut}
+        return {'video': cut, 'label': label}
 
     def video2numpy(self,
             filepath: str) -> np.ndarray:

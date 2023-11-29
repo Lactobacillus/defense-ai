@@ -90,7 +90,8 @@ class Stage1Trainer(object):
 
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
-                video = batch['vid']
+                video = batch['video']
+                label = batch['label'].to('cuda')
                 bs, fl, _, w, h = video.size()
                 video = video.view(bs * fl, 3, w, h)
 
@@ -104,7 +105,7 @@ class Stage1Trainer(object):
                     logit = self.aggr(pred)
                     prob = torch.sigmoid(logit)
 
-                    loss = F.binary_cross_entropy(prob, batch['gt'].to('cuda'))
+                    loss = F.binary_cross_entropy(prob, label)
 
                 optimizer.zero_grad(set_to_none = True)
                 grad_scaler.scale(loss).backward()
