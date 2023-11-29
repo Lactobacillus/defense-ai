@@ -15,6 +15,7 @@ from torch.cuda.amp import GradScaler, autocast
 from transformers import VideoMAEImageProcessor, VideoMAEForPreTraining, VideoMAEForVideoClassification
 from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
 
+from data.dataset import VideoPretrainData
 from train.util import LossAccumulator
 
 
@@ -47,8 +48,8 @@ class PreTrainer(object):
 
     def build_dataset(self) -> None:
 
-        self.train_data = TempModel(self.args['data_path'])
-        self.test_data = TempModel(self.args['data_path'])
+        self.train_data = VideoPretrainData(self.args['data_path'], self.args['frame_length'])
+        self.test_data = VideoPretrainData(self.args['data_path'], self.args['frame_length'])
 
     def build_model(self) -> None:
 
