@@ -57,14 +57,16 @@ class Aggregator(nn.Module):
         super(Aggregator, self).__init__()
 
         self.linear = nn.Linear(2048, 64)
-        self.conv1 = nn.Conv3d(64, 16, 3, 2)
+        self.layer1 = md.ResBlock3d(64, 32, 3)
+        self.layer2 = md.ResBlock3d(32, 16, 3)
 
     def forward(self,
             x: torch.Tensor) -> torch.Tensor:
 
-        x = torch.transpose(x, (0, 1, 3, 4, 2))
+        x = torch.permute(x, (0, 1, 3, 4, 2))
         x = F.leaky_relu(self.linear(x)) # (bs, fl, w, h, d)
-        x = torch.transpose(x, (0, 4, 1, 2, 3)) # (bs, d, fl, w, h)
-        x = F.leaky_relu(self,conv1(x))
+        x = torch.permute(x, (0, 4, 1, 2, 3)) # (bs, d, fl, w, h)
+        x = self.layer1(x)
+        x = self.layer2(x)
 
         return x

@@ -14,7 +14,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 from transformers import AutoImageProcessor
 
-from model.model import CustomResNet50
+from model.model import CustomResNet50, Aggregator
 from data.dataset import VideoPretrainData
 from train.util import LossAccumulator
 
