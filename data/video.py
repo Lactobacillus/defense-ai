@@ -32,7 +32,7 @@ def process_folder(input_folder: str, output_folder: str, preprocess: Preprocess
         for idx, video_file in enumerate(video_files):
             filename = os.path.basename(video_file)
             output_face_file = os.path.join(output_face_path, filename)
-            output_numpy_file = os.path.join(output_numpy_path, filename)
+            output_numpy_file = os.path.join(output_numpy_path, filename.replace('.mp4', '.npy'))
 
             preprocess.make_face_video(src_video_path=video_file, dst_video_path=output_face_file, dst_numpy_path=output_numpy_file)
             preprocess.print_log(f'{idx+1}/{len(video_files)} 작업 완료')
