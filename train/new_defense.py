@@ -12,9 +12,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torch.cuda.amp import GradScaler, autocast
 
-from torchvision.models import resnet50, ResNet50_Weights
-from transformers import AutoImageProcessor
-
+from model.model import CustomResNet50
 from data.dataset import VideoPretrainData
 from train.util import LossAccumulator
 
@@ -54,7 +52,7 @@ class PreTrainer(object):
     def build_model(self) -> None:
 
         self.processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50')
-        self.model = resnet50(weights = ResNet50_Weights.IMAGENET1K_V2).to('cuda')
+        self.model = CustomResNet50.to('cuda')
         self.model = torch.compile(self.model)
 
     def train(self,
