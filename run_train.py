@@ -12,27 +12,17 @@ def main(args: Dict[str, Any],
 
         case 1:
 
-            # Pretraine VideoMAE
-            from train.defense import PreTrainer as Trainer
+            from train.new_defense import Stage1Trainer as Trainer
 
             trainer = Trainer(args)
             trainer.train('train')
 
-        # case 2:
+        case 2:
 
-        #     # Finetune VideoMAE
-        #     from train.defense import FinetuneTrainer as Trainer
+            from train.new_defense import Stage2Trainer as Trainer
             
-        #     trainer = Trainer(args)
-        #     trainer.train('train')
-
-        # case 3:
-
-        #     # Finetue VideoMAE using KD and reset
-        #     from train.defense import FinetuneTrainerKD as Trainer
-            
-        #     trainer = Trainer(args)
-        #     trainer.train('train')
+            trainer = Trainer(args)
+            trainer.train('train')
 
 
 if __name__ == '__main__':
@@ -40,7 +30,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('conf', type = str,
                         help = 'config file')
-    parser.add_argument('--stage', type = int, choices = [1, 2, 3],
+    parser.add_argument('--stage', type = int, choices = [1, 2],
                         help = 'training stage: [1, 2, 3]')
     parser.add_argument('--omp-num-threads', type = int,
                         default = 2,
