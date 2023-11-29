@@ -16,7 +16,7 @@ class Preprocess:
         self.dst_video_path: str = None
         self.output_size: Tuple[int, int] = None
 
-        self.insight_face_app = FaceAnalysis(name='buffalo_l')
+        self.insight_face_app = FaceAnalysis(name='buffalo_sc')
         self.insight_face_app.prepare(ctx_id=0, det_size=(480,480))
     
     def print_log(self, text) -> None:
@@ -52,49 +52,6 @@ class Preprocess:
         cap.release()
 
         return buf
-    
-    def align_face(self, face: np.ndarray, src_landmarks: np.ndarray, target_landmarks: np.ndarray) -> np.ndarray:
-        """
-        얼굴을 정렬하는 함수입니다. 
-        src_landmarks는 현재 프레임의 얼굴 랜드마크이고,
-        target_landmarks는 정렬 기준이 될 랜드마크입니다.
-        """
-        # 현재 얼굴의 랜드마크 조정
-        src = src_landmarks.astype(np.float32)
-
-        # 타겟 랜드마크 조정
-        target = target_landmarks.astype(np.float32)
-
-        # 변환 매트릭스 계산
-        transform_matrix = cv2.estimateAffinePartial2D(src, target)[0]
-
-        # 얼굴 정렬
-        aligned_face = cv2.warpAffine(face, transform_matrix, self.output_size, borderValue=0.0)
-
-        return aligned_face
-    
-    def find_first_valid_landmarks(self, frames: List[np.ndarray]) -> Optional[np.ndarray]:
-        """
-        첫 번째 유효한 랜드마크를 가진 프레임을 찾는 함수입니다.
-        유효한 랜드마크를 찾지 못하면 None을 반환합니다.
-                        bbox = face.bbox.astype(int)
-                landmarks = face.kps.astype(int)
-                # 바운딩 박스에 맞춰 랜드마크 조정
-                adjusted_landmarks = landmarks.copy()
-                adjusted_landmarks[:, 0] -= bbox[0]
-                adjusted_landmarks[:, 1] -= bbox[1]
-        """
-        for frame in frames:
-            faces = self.insight_face_app.get(frame)
-            for face in faces:
-                if face is not None and face.kps is not None:
-                    print("랜드마크를 찾았습니다.")
-                    return face.kps
-                
-        print("랜드마크를 찾지 못했습니다.")
-        return None
-        
-        
 
     def extract_faces(self, frames: List[np.ndarray]) -> List[np.ndarray]:
         """
@@ -203,30 +160,29 @@ class Preprocess:
             self.print_log('얼굴 비디오 생성에 실패하였습니다.')
 
         return success
-            print('[LOG] 얼굴 비디오 생성에 실패하였습니다.')
-    
+
     def RGB_mean_var(folder_path, frame_index=0):
-        
-        mean_squared_len = []
-        mean_len = []
-        total_length = 0
-        file_list = os.listdir(folder_path)
-        
-        for file_name in file_list:
-            file_path = os.path.join(folder_path, file_name)
-            cap = cv2.VideoCapture(file_path)
-            length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
-            ret, frame = cap.read()
-            cap.release()
             
-            m = frame.mean(axis=(0, 1))
-            mean_squared_len.append(m**2*length)
-            mean_len.append(m*length)
-            total_length += length
+            mean_squared_len = []
+            mean_len = []
+            total_length = 0
+            file_list = os.listdir(folder_path)
             
-        MEAN = np.array(mean_len).sum(axis=0) / total_length
-        VAR = (np.array(mean_squared_len).sum(axis=0) / total_length) - (MEAN**2)
-        
-        
-        return MEAN, VAR
+            for file_name in file_list:
+                file_path = os.path.join(folder_path, file_name)
+                cap = cv2.VideoCapture(file_path)
+                length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+                ret, frame = cap.read()
+                cap.release()
+                
+                m = frame.mean(axis=(0, 1))
+                mean_squared_len.append(m**2*length)
+                mean_len.append(m*length)
+                total_length += length
+                
+            MEAN = np.array(mean_len).sum(axis=0) / total_length
+            VAR = (np.array(mean_squared_len).sum(axis=0) / total_length) - (MEAN**2)
+            
+            
+            return MEAN, VAR

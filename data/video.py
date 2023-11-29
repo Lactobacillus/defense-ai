@@ -55,6 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('--omp-num-threads', type = int,
                         default = 2,
                         help = 'OMP_NUM_THREADS option')
+                        
     args = vars(parser.parse_args())
 
     # os.environ['OMP_NUM_THREADS'] = str(opt['omp_num_threads'])
