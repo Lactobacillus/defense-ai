@@ -15,7 +15,7 @@ from torch.cuda.amp import GradScaler, autocast
 from transformers import AutoImageProcessor
 
 from model.model import CustomResNet50, Aggregator
-from data.dataset import VideoPretrainData
+from data.dataset import VideoStage1Data
 from train.util import LossAccumulator
 
 
@@ -48,8 +48,8 @@ class Stage1Trainer(object):
 
     def build_dataset(self) -> None:
 
-        self.train_data = VideoPretrainData(self.args['data_path'], self.args['frame_length'])
-        self.test_data = VideoPretrainData(self.args['data_path'], self.args['frame_length'])
+        self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
+        self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
 
     def build_model(self) -> None:
 
@@ -102,7 +102,7 @@ class Stage1Trainer(object):
                     bsfl, d, w, h = emb.size()
                     emb = emb.view(bs, fl, d, w, h)
 
-                    logit = self.aggr(pred)
+                    logit = self.aggr(emb)
                     prob = torch.sigmoid(logit)
 
                     loss = F.binary_cross_entropy(prob, label)
