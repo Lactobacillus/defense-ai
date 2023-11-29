@@ -1,6 +1,7 @@
 import os
 import sys
 import timeit
+import wandb
 import numpy as np
 from tqdm import tqdm
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
@@ -9,13 +10,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+from torch.cuda.amp import GradScaler, autocast
 
-from model.model import TempModel
-from data.dataset import SingleImage
+from transformers import VideoMAEImageProcessor, VideoMAEForPreTraining, VideoMAEForVideoClassification
+from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
+
 from train.util import LossAccumulator
 
 
-class Trainer(object):
+class PreTrainer(object):
 
     def __init__(self,
             args: Dict[str, Any]) -> None:
@@ -27,6 +30,21 @@ class Trainer(object):
         self.build_model()
         self.build_dataset()
 
+        if args['use_wandb'] and not args['debug']:
+
+            self.use_wandb = True
+            self.build_wandb()
+
+        else: self.use_wandb = False
+
+    def build_wandb(self) -> None:
+
+        os.makedirs(os.path.join(self.args['result_path'], self.args['exp_name'], 'wandb'), exist_ok = True)
+
+        wandb.init(name = name, project = 'defense-ai', entity = self.args['wandb_entity'],
+                    dir = os.path.join(self.args['result_path'], name),
+                    config = self.args, config_exclude_keys = self.args['wandb_exclude'])
+
     def build_dataset(self) -> None:
 
         self.train_data = TempModel(self.args['data_path'])
@@ -34,7 +52,16 @@ class Trainer(object):
 
     def build_model(self) -> None:
 
-        self.model = TempModel(self.args)
+        self.processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base")
+        self.model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base").to('cuda')
+        # self.peft_conf = LoraConfig(inference_mode = False,
+        #                     r = 8,
+        #                     lora_alpha = 32,
+        #                     lora_dropout = 0.1,
+        #                     task_type = TaskType.SEQ_CLS,
+        #                     target_modules = ['query', 'key', 'value'])
+        # self.model = get_peft_model(self.model, self.peft_config)
+        # self.model.print_trainable_parameters()
 
     def train(self,
             dataset: str = 'train',
@@ -54,7 +81,10 @@ class Trainer(object):
             drop_last = False,
             num_workers = 2,
             pin_memory = True)
-        optimizer = torch.optim.Adam(list(self.model.parameters()), lr = self.args['lr'])
+        optimizer = torch.optim.AdamW(list(self.model.parameters()), lr = self.args['lr'])
+        grad_scaler = GradScaler()
+        num_patches_per_frame = (self.model.config.image_size // self.model.config.patch_size) ** 2
+        seq_length = (num_frames // self.model.config.tubelet_size) * num_patches_per_frame
 
         for epoch in range(self.args['epoch']):
 
@@ -65,63 +95,32 @@ class Trainer(object):
 
                 batch = {k: batch[k].to('cuda') for k in batch}
 
-                pred = self.model(batch['coord'])
-                true = batch['pixel']
-                loss = F.mse_loss(pred, true)
+                with autocast(dtype = torch.bfloat16):
 
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                    raise NotImplementedError
+
+                    inputs = processor(video, return_tensors = 'pt').pixel_values.to('cuda')
+                    bool_masked_pos = torch.randint(0, 2, (1, seq_length)).bool()
+
+                    outputs = self.model(pixel_values, bool_masked_pos = bool_masked_pos)
+                    loss = outputs.loss
+
+                optimizer.zero_grad(set_to_none = True)
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+
+                if self.use_wandb:
+
+                    wandb.log({'train/pretrain': loss.item()})
 
             epoch_end = timeit.default_timer()
 
-            if epoch % self.args['test_freq'] == 0:
-                
-                print('\n[info] Epoch {} (Total: {})'.format(epoch, self.args['epoch']))
-                self.test(epoch, 'train')
-                self.save_image('result_{}'.format(epoch))
+            print('[info] Epoch {} (Total: {}), elapsed time: {:.4f}'.format(epoch, self.args['epoch'], epoch_end - epoch_start))
 
         else:
 
             print('[info] Train finished')
-
-    @torch.no_grad()
-    def test(self,
-            epoch: Union[int, str],
-            dataset: str = 'test') -> None:
-
-        loss_meter = LossAccumulator()
-
-        self.model.eval()
-        self.model = self.model.to('cuda')
-
-        match dataset:
-
-            case 'train': dset = self.train_data
-            case 'test': dset = self.test_data
-
-        test_loader = DataLoader(dataset = dset,
-            batch_size = self.args['batch_size'],
-            shuffle = False,
-            drop_last = False,
-            num_workers = 2,
-            pin_memory = True)
-
-        for idx, batch in tqdm(enumerate(test_loader), total = len(test_loader)):
-
-            batch = {k: batch[k].to('cuda') for k in batch}
-
-            pred = self.model(batch['coord'])
-            true = batch['pixel']
-            loss = F.mse_loss(pred, true)
-
-            loss_meter.add({'loss': loss}, true.size(0))
-
-        total_loss = loss_meter.get()['loss'].item()
-
-        print('[info] {} data loss: {:.4f} (epoch: {})'.format(dataset, total_loss, epoch))
-
-        return total_loss
 
     def save_checkpoint(self,
             filename: Optional[str] = None) -> None:
@@ -132,3 +131,7 @@ class Trainer(object):
                     'args': self.args}
 
         torch.save(checkpoint, os.path.join(self.result_root, '{}.pkl'.format(filename)))
+
+    def __del__(self) -> None:
+
+        wandb.finish(0)
