@@ -18,13 +18,13 @@ def main(args: Dict[str, Any],
             trainer = Trainer(args)
             trainer.train('train')
 
-        # case 2:
+        case 2:
 
-        #     # Finetune VideoMAE
-        #     from train.defense import FinetuneTrainer as Trainer
+            # Finetune VideoMAE
+            from train.defense import FinetuneTrainer as Trainer
             
-        #     trainer = Trainer(args)
-        #     trainer.train('train')
+            trainer = Trainer(args)
+            trainer.train('train')
 
         # case 3:
 
