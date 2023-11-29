@@ -8,11 +8,9 @@ from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable, Itera
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from data.preprocess import Preprocess
 
-
 def main(args: Dict[str, Any]) -> None:
     preprocess = Preprocess()
     preprocess.make_face_video(dst_video_path=args['out_path'])
-
 
 if __name__ == '__main__':
 
