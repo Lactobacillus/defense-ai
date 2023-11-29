@@ -116,20 +116,16 @@ class MLP(nn.Module):
 
 class ResBlock3d(nn.Module):
 
-    def __init__()
-
-
     def __init__(self,
             in_ch: int,
-            out_ch: int,
-            kernel: int = 3) -> None:
+            out_ch: int) -> None:
 
         super(ResBlock3d, self).__init__()
 
         # Define the first convolutional layer
-        self.conv1 = nn.Conv3d(in_ch, in_ch, kernel_size = kernel)
+        self.conv1 = nn.Conv3d(in_ch, in_ch, kernel_size = 3, padding = 1)
         self.bn1 = nn.BatchNorm3d(in_ch)
-        self.conv2 = nn.Conv3d(in_ch, in_ch, kernel_size = kernel)
+        self.conv2 = nn.Conv3d(in_ch, in_ch, kernel_size = 3, padding = 1)
         self.bn2 = nn.BatchNorm3d(in_ch)
 
     def forward(self,
