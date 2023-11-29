@@ -10,7 +10,8 @@ from data.preprocess import Preprocess
 
 def main(args: Dict[str, Any]) -> None:
     preprocess = Preprocess()
-    preprocess.make_face_video()
+    # preprocess.make_face_video()
+    preprocess.make_face_video_all()
 
 if __name__ == '__main__':
 
