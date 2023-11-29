@@ -5,32 +5,13 @@ import argparse
 import numpy as np
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable, Iterator, Iterable
 
-
-def video2numpy(filepath: str) -> np.ndarray:
-
-    cap = cv2.VideoCapture(train['path'][0])
-    frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-    buf = np.empty((frameCount, frameHeight, frameWidth, 3), np.dtype('uint8'))
-
-    fc = 0
-    ret = True
-
-    while (fc < frameCount  and ret):
-        
-        ret, buf[fc] = cap.read()
-        fc += 1
-
-    cap.release()
-
-    return buf
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from data.preprocess import Preprocess
 
 
 def main(args: Dict[str, Any]) -> None:
-
-    pass
+    preprocess = Preprocess()
+    preprocess.make_face_video(dst_video_path=args['out_path'])
 
 
 if __name__ == '__main__':
@@ -45,6 +26,6 @@ if __name__ == '__main__':
                         help = 'OMP_NUM_THREADS option')
     args = vars(parser.parse_args())
 
-    os.environ['OMP_NUM_THREADS'] = str(opt['omp_num_threads'])
+    # os.environ['OMP_NUM_THREADS'] = str(opt['omp_num_threads'])
 
     main(args)
