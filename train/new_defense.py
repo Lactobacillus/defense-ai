@@ -80,27 +80,30 @@ class Stage1Trainer(object):
             drop_last = False,
             num_workers = 4,
             pin_memory = True)
-        optimizer = torch.optim.AdamW(list(self.model.parameters()), lr = self.args['lr'])
+        optimizer = torch.optim.AdamW(list(self.aggr.parameters()), lr = self.args['lr'])
         grad_scaler = GradScaler()
 
         for epoch in range(self.args['epoch']):
 
             self.model.train()
+            self.aggr.train()
             epoch_start = timeit.default_timer()
 
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
                 video = batch['video']
-                label = batch['label'].unsqueeze(-1).to('cuda')
+                label = batch['label'].float().unsqueeze(-1).to('cuda')
                 bs, fl, _, w, h = video.size()
                 video = video.view(bs * fl, 3, w, h)
 
                 with autocast(dtype = torch.bfloat16):
 
-                    pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
-                    emb = self.model(pixel) # (bs * fl, dim, w, h)
-                    bsfl, d, w, h = emb.size()
-                    emb = emb.view(bs, fl, d, w, h)
+                    with torch.no_grad():
+                        
+                        pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
+                        emb = self.model(pixel) # (bs * fl, dim, w, h)
+                        bsfl, d, w, h = emb.size()
+                        emb = emb.view(bs, fl, d, w, h)
 
                     logit = self.aggr(emb)
                     loss = F.binary_cross_entropy_with_logits(logit, label)
