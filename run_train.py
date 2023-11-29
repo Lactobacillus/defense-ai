@@ -12,16 +12,14 @@ def main(args: Dict[str, Any],
 
         case 1:
 
-            # Pretraine VideoMAE
-            from train.defense import Stage1Trainer as Trainer
+            from train.new_defense import Stage1Trainer as Trainer
 
             trainer = Trainer(args)
             trainer.train('train')
 
         case 2:
 
-            # Finetune VideoMAE
-            from train.defense import Stage2Trainer as Trainer
+            from train.new_defense import Stage2Trainer as Trainer
             
             trainer = Trainer(args)
             trainer.train('train')
