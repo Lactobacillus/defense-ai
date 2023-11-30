@@ -79,7 +79,7 @@ class Stage2Trainer(object):
         self.model = torch.compile(self.model)
         self.model_teacher = torch.compile(self.model_techer)
         self.aggr = torch.compile(self.aggr)
-        self.aggr_teacher = torch.compile(self.aggr_teacher
+        self.aggr_teacher = torch.compile(self.aggr_teacher)
 
     def train(self,
             dataset: str = 'train',
