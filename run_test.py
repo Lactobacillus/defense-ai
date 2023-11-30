@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import random
 import cv2
+import ujson
 from tqdm import tqdm
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
@@ -136,6 +137,7 @@ def main(args: Dict[str, Any],
     linear.load_state_dict(checkpoint['linear'])
     linear.eval()
 
+    logits_dict = {}
     for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
         #inference 하기
         with torch.no_grad():
@@ -153,7 +155,7 @@ def main(args: Dict[str, Any],
                 print('save_logits', save_logits)
                 for idx, fn in enumerate(files):
                     print('save_logits size : ', save_logits[idx].shape)
-                    np.save( os.path.join(logits_path, fn.replace('.mp4', '.npy')), save_logits[idx])
+                    logits_dict[fn] = save_logits[idx]
                 
                 logit.to('cuda')
             
@@ -168,7 +170,10 @@ def main(args: Dict[str, Any],
 
     if args['logits_extract'] is False:
         submission.to_csv('/home/elicer/sample_submission_test.csv', index=False)
-        
+
+    with open('real_logits.json', "w") as json_file:
+        data = ujson.dumps(logits_dict)
+        json_file.write(data)
 
 if __name__ == '__main__':
 
