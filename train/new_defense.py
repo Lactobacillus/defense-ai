@@ -124,7 +124,7 @@ class Stage1Trainer(object):
 
                 if idx % self.args['reset_freq'] == 0:
 
-                    self.aggr_ema.reset_fc()
+                    self.aggr.reset_fc()
 
                 if self.use_wandb:
 
