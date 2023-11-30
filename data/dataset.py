@@ -176,13 +176,14 @@ class VideoStage2Data(Dataset):
 
         fn, label = self.pair[idx]
         video = self.video2tensor(fn)
-        slabel = self.soft_label[fn.split('/')[-1]]
+        # slabel = self.soft_label[fn.split('/')[-1]]
 
         start = random.randrange(0, video.size(0) - self.frame_length - 1)
         end = start + self.frame_length
         video = video[start:end, ...]
 
-        return {'video': video, 'label': label, 'slabel': slabel}
+        return {'video': video, 'label': label}
+        # return {'video': video, 'label': label, 'slabel': slabel}
 
     def video2tensor(self,
             filename: str,
