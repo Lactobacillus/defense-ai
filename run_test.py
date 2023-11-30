@@ -133,7 +133,7 @@ def main(args: Dict[str, Any],
 
         submission.loc[submission['path'] == test_file_name, 'label'] = 'real' if pred == 1.0 else 'fake'
 
-    submission.to_csv('/home/elicer/sample_submission_test.csv', index=False)
+    submission.to_csv('/home/elicer/sample_submission_{}.csv'.format(args['name']), index=False)
 
 
 # file 있으면 건너뛰기
@@ -150,6 +150,8 @@ if __name__ == '__main__':
                         help = 'OMP_NUM_THREADS option')
     parser.add_argument('--ema', action='store_true',
                         help = 'use ema')
+    parser.add_argument('--name', type = str,
+                        help = 'submission name')
 
     opt = vars(parser.parse_args())
 
