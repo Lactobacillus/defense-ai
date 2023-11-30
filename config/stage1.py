@@ -14,9 +14,15 @@ args['exp_name'] = 'finetune'
 args['result_path'] = os.path.join(home, 'temporary_reset/')
 
 # args['data_path'] = '/mnt/elice/dataset'
-args['data_path'] = './outputs_video'
-args['frame_length'] = 1
-args['batch_size'] = 128
+args['data_path'] = os.path.join(home, 'dataset/only_face')
+args['checkpoints_path'] = '/home/elicer/temporary'
+args['data_train_path'] = '/mnt/elice/dataset/train'
+args['data_test_path'] = '/mnt/elice/dataset/test'
+args['numpy_data_set'] = False
+args['logits_extract'] = True
+
+args['frame_length'] = 64
+args['batch_size'] = 16
 
 args['lr'] = 1e-4
 args['epoch'] = 100
