@@ -149,7 +149,7 @@ class Stage1Trainer(object):
 
         test_loader = DataLoader(dataset = dset,
             batch_size = self.args['batch_size'],
-            shuffle = False,
+            shuffle = True,
             drop_last = False,
             num_workers = 4,
             pin_memory = True)
