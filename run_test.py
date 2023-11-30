@@ -15,6 +15,7 @@ import torchvision as tv
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import to_pil_image
 from torch.utils.data import Dataset, DataLoader
+from train.util import LossAccumulator, EMA
 import glob
 
 from transformers import AutoImageProcessor
@@ -120,9 +121,19 @@ def main(args: Dict[str, Any],
     linear.load_state_dict(checkpoint['linear'])
     linear.eval()
 
+    model_ema = EMA(self.model, decay = 0.9)
+    model_ema.load_state_dict(checkpoint['model_ema'])
+    
+    linear_ema = EMA(self.linear, decay = 0.9)
+    linear_ema.load_state_dict(checkpoint['linear_ema'])
+
     logits_dict = {}
     for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
         #inference 하기
+        if use_ema:
+            model_ema.apply_shadow()
+            aggr_ema.apply_shadow()
+
         with torch.no_grad():
             video = batch['video'].to('cuda')
             files = batch['file_name']
