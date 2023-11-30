@@ -120,7 +120,7 @@ class Stage2Trainer(object):
 
                 video = batch['video'].to('cuda')
                 label = batch['label'].bfloat16().unsqueeze(-1).to('cuda')
-                # slabel = batch['slabel'].bfloat16().unsqueeze(-1).to('cuda')
+                slabel = batch['slabel'].bfloat16().unsqueeze(-1).to('cuda')
                 bs, fl, _, w, h = video.size()
                 video = video.view(bs * fl, 3, w, h)
 
@@ -132,16 +132,17 @@ class Stage2Trainer(object):
 
                     logit = self.aggr(emb)
 
-                    with torch.no_grad():
+                    # with torch.no_grad():
 
-                        emb = self.model(video) # (bs * fl, dim, w, h)
-                        bsfl, d, w, h = emb.size()
-                        emb = emb.view(bs, fl, d, w, h)
+                    #     emb = self.model(video) # (bs * fl, dim, w, h)
+                    #     bsfl, d, w, h = emb.size()
+                    #     emb = emb.view(bs, fl, d, w, h)
 
-                        slogit = self.aggr(emb)
+                    #     slogit = self.aggr(emb)
 
                     loss = F.binary_cross_entropy_with_logits(logit, label)
-                    kd_loss = F.mse_loss(logit, slogit)
+                    # kd_loss = F.mse_loss(logit, slogit)
+                    kd_loss = F.mse_loss(logit, slabel)
 
                     loss = (1 - self.args['distillation']) * loss + self.args['distillation'] * kd_loss
 

@@ -163,7 +163,7 @@ class VideoStage2Data(Dataset):
         self.pair = [(os.path.join(data_path, split, 'real', fn), 1) for fn in real_list]
         self.pair = self.pair + [(os.path.join(data_path, split, 'fake', fn), 0) for fn in fake_list]
 
-        with open(os.path.join(data_path, 'logit.pkl'), 'rb') as fs:
+        with open(os.path.join(data_path, 'other_logit.pkl'), 'rb') as fs:
 
             self.soft_label = pickle.load(fs)
 
@@ -176,14 +176,14 @@ class VideoStage2Data(Dataset):
 
         fn, label = self.pair[idx]
         video = self.video2tensor(fn)
-        # slabel = self.soft_label[fn.split('/')[-1]]
+        slabel = self.soft_label[fn.split('/')[-1]]
 
         start = random.randrange(0, video.size(0) - self.frame_length - 1)
         end = start + self.frame_length
         video = video[start:end, ...]
 
-        return {'video': video, 'label': label}
-        # return {'video': video, 'label': label, 'slabel': slabel}
+        # return {'video': video, 'label': label}
+        return {'video': video, 'label': label, 'slabel': slabel}
 
     def video2tensor(self,
             filename: str,
@@ -195,7 +195,7 @@ class VideoStage2Data(Dataset):
             transforms.ToPILImage(),
             transforms.Resize(output_size),
             transforms.ToTensor(),
-            Cutout(2, 16),
+            Cutout(1, 32),
             transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
         ])
 
@@ -226,10 +226,12 @@ class Cutout(object):
             x1 = np.clip(x - self.length // 2, 0, w)
             x2 = np.clip(x + self.length // 2, 0, w)
 
-            mask[y1: y2, x1: x2] = 0.
+            img[:, y1:y2, x1:x2] = img[:, y1:y2, x1:x2].mean()
 
-        mask = torch.from_numpy(mask)
-        mask = mask.expand_as(img)
-        img *= mask
+        #     mask[y1: y2, x1: x2] = 0.
+
+        # mask = torch.from_numpy(mask)
+        # mask = mask.expand_as(img)
+        # img *= mask
 
         return img
