@@ -24,7 +24,7 @@ def make_video_numpy(video_path, frame_length) -> np.ndarray:
     fn = video_path
     video = video2numpy(fn)
 
-    start = random.randrange(0, video.shape[0] - frame_length - 1)
+    start = random.randrange(0, video.shape[0] - frame_length + 1)
     end = start + frame_length
     cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
 
@@ -65,7 +65,9 @@ def main(args: Dict[str, Any],
 
     preprocess = Preprocess()
 
-    for test_file_name in test_file_names:
+    for idx, test_file_name in enumerate(test_file_names):
+        if idx % 100 == 0:
+            print(f'{idx+1}/{len(test_file_names)} 작업 중')
         # face video 만들기
         video_path = os.path.join(args['data_test_path'], test_file_name)
         face_video_path = os.path.join(args['data_path'], 'test', test_file_name)
