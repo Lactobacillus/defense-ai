@@ -1,6 +1,7 @@
 import os
 import sys
 import cv2
+import pickle
 import random
 import numpy as np
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable, Iterator, Iterable
@@ -259,3 +260,91 @@ class TestNumpyDataset(Dataset):
         cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
 
         return {'video': cut, 'file_name': filename}
+    
+class VideoStage2Data(Dataset):
+
+    def __init__(self,
+            data_path: str,
+            frame_length: int = 16,
+            split: str = 'train') -> None:
+
+        self.data_path = data_path
+        self.frame_length = frame_length
+
+        real_list = os.listdir(os.path.join(data_path, split, 'real'))
+        fake_list = os.listdir(os.path.join(data_path, split, 'fake'))
+        self.pair = [(os.path.join(data_path, split, 'real', fn), 1) for fn in real_list]
+        self.pair = self.pair + [(os.path.join(data_path, split, 'fake', fn), 0) for fn in fake_list]
+
+        with open(os.path.join(data_path, 'other_logit.pkl'), 'rb') as fs:
+
+            self.soft_label = pickle.load(fs)
+
+    def __len__(self) -> int:
+
+        return len(self.pair)
+
+    def __getitem__(self,
+            idx: int) -> Dict[str, Any]:
+
+        fn, label = self.pair[idx]
+        video = self.video2tensor(fn)
+        slabel = self.soft_label[fn.split('/')[-1]]
+
+        start = random.randrange(0, video.size(0) - self.frame_length - 1)
+        end = start + self.frame_length
+        video = video[start:end, ...]
+
+        # return {'video': video, 'label': label}
+        return {'video': video, 'label': label, 'slabel': slabel}
+
+    def video2tensor(self,
+            filename: str,
+            output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
+
+        video, _, _ = tv.io.read_video(filename, output_format = 'TCHW', pts_unit = 'sec')
+
+        transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(output_size),
+            transforms.ToTensor(),
+            Cutout(1, 32),
+            transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
+        ])
+
+        video = torch.stack([transform(frame) for frame in video])
+
+        return video
+
+
+class Cutout(object):
+    def __init__(self, n_holes, length):
+
+        self.n_holes = n_holes
+        self.length = length
+
+    def __call__(self, img):
+
+        h = img.size(1)
+        w = img.size(2)
+
+        mask = np.ones((h, w), np.float32)
+
+        for _ in range(self.n_holes):
+            y = np.random.randint(h)
+            x = np.random.randint(w)
+
+            y1 = np.clip(y - self.length // 2, 0, h)
+            y2 = np.clip(y + self.length // 2, 0, h)
+            x1 = np.clip(x - self.length // 2, 0, w)
+            x2 = np.clip(x + self.length // 2, 0, w)
+
+            img[:, y1:y2, x1:x2] = img[:, y1:y2, x1:x2].mean()
+
+        #     mask[y1: y2, x1: x2] = 0.
+
+        # mask = torch.from_numpy(mask)
+        # mask = mask.expand_as(img)
+        # img *= mask
+
+        return img

@@ -18,9 +18,9 @@ def main(args: Dict[str, Any],
             raise ValueError("Unsupported stage for image mode")
     elif mode == 'video':
         if stage == 1:
-            from train.new_defense import Stage1Trainter as Trainer
+            from train.new_defense import Stage1Trainer as Trainer
         elif stage == 2:
-            from train.new_defense import Stage2Trainer as Trainer
+            from train.defense2 import Stage2Trainer as Trainer
         else:
             raise ValueError("Unsupported stage for video mode")
     else:

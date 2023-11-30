@@ -10,13 +10,15 @@ from pathlib import Path
 home = str(Path.home())
 args = dict()
 
-args['exp_name'] = 'stage1'
+args['exp_name'] = 'stage2-valid-newarch'
 args['result_path'] = os.path.join(home, 'temporary/')
 
-args['data_path'] = os.path.join(home, 'dataset/only_face')
+args['data_path'] = os.path.join(home, 'dataset/only_face_split')
 args['data_test_path'] = '/mnt/elice/dataset/test'
+args['checkpoint_path'] = os.path.join(home, 'temporary/stage2-valid-newarch-fl16/')
 args['frame_length'] = 16
-args['batch_size'] = 16
+args['batch_size'] = 12
+args['distillation'] = 0.5
 
 args['lr'] = 1e-4
 args['epoch'] = 100

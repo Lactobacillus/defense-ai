@@ -10,17 +10,24 @@ from pathlib import Path
 home = str(Path.home())
 args = dict()
 
-args['exp_name'] = 'stage1'
-args['result_path'] = os.path.join(home, 'temporary/')
+args['exp_name'] = 'finetune'
+args['result_path'] = os.path.join(home, 'temporary_reset/')
 
+# args['data_path'] = '/mnt/elice/dataset'
 args['data_path'] = os.path.join(home, 'dataset/only_face')
+args['checkpoints_path'] = '/home/elicer/temporary'
+args['data_train_path'] = '/mnt/elice/dataset/train'
 args['data_test_path'] = '/mnt/elice/dataset/test'
-args['frame_length'] = 16
+args['numpy_data_set'] = False
+args['logits_extract'] = True
+
+args['frame_length'] = 64
 args['batch_size'] = 16
 
 args['lr'] = 1e-4
 args['epoch'] = 100
-args['ema_update_freq'] = 50
+
+args['ema_update_freq'] = 100
 args['reset_freq'] = 200
 
 args['use_wandb'] = True

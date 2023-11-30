@@ -4,6 +4,10 @@ from collections import defaultdict
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
@@ -28,7 +32,6 @@ class LossAccumulator(object):
         for key in self.loss.keys(): accumulated[key] = sum(self.loss[key]) / sum(self.num_samples)
 
         return accumulated
-
 
 class EMA(object):
 

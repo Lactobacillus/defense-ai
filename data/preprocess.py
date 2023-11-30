@@ -138,6 +138,11 @@ class Preprocess:
             width : output video 가로
             height : output video 세로
         """
+
+        if os.path.exists(dst_video_path):
+            self.print_log(f"{dst_video_path}가 이미 존재해서 face_video 생성을 skip 합니다.")
+            return True
+
         self.src_video_path = src_video_path
         self.dst_video_path = dst_video_path
         self.output_size = (width, height)
