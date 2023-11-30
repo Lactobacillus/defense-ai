@@ -136,8 +136,8 @@ class VideoStage1Data(Dataset):
             transforms.Resize(output_size),
             transforms.ToTensor(),
             transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
-            ])
+        ])
 
-        video_tensor = torch.stack([transform(to_pil_image(frame)) for frame in video])
+        video = torch.stack([transform(frame) for frame in video])
 
         return video
