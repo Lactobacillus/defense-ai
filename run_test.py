@@ -139,7 +139,7 @@ def main(args: Dict[str, Any],
 
             logit_dict[test_file_name] = logit.item()
 
-        submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred == 1.0 else 'real'
+        submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred == 0.0 else 'real'
 
     submission.to_csv('/home/elicer/sample_submission_{}.csv'.format(name), index=False)
 
