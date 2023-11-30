@@ -121,10 +121,10 @@ def main(args: Dict[str, Any],
     linear.load_state_dict(checkpoint['linear'])
     linear.eval()
 
-    model_ema = EMA(self.model, decay = 0.9)
+    model_ema = EMA(model, decay = 0.9)
     model_ema.load_state_dict(checkpoint['model_ema'])
     
-    linear_ema = EMA(self.linear, decay = 0.9)
+    linear_ema = EMA(linear, decay = 0.9)
     linear_ema.load_state_dict(checkpoint['linear_ema'])
 
     logits_dict = {}
@@ -132,7 +132,7 @@ def main(args: Dict[str, Any],
         #inference 하기
         if use_ema:
             model_ema.apply_shadow()
-            aggr_ema.apply_shadow()
+            linear_ema.apply_shadow()
 
         with torch.no_grad():
             video = batch['video'].to('cuda')
