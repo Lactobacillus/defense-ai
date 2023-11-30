@@ -14,9 +14,9 @@ args['exp_name'] = 'finetune'
 args['result_path'] = os.path.join(home, 'temporary_reset/')
 
 # args['data_path'] = '/mnt/elice/dataset'
-args['data_path'] = './outputs_video'
-args['checkpoints_path'] = 'C:/Users/Admin/temporary/finetune'
-args['data_test_path'] = 'C:/Users/Admin/dataset/only_face/test'
+args['data_path'] = os.path.join(home, 'dataset/only_face')
+args['checkpoints_path'] = '/home/elicer/temporary'
+args['data_test_path'] = '/mnt/elice/dataset/test'
 
 args['frame_length'] = 1
 args['batch_size'] = 128
