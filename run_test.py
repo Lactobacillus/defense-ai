@@ -55,7 +55,7 @@ def main(args: Dict[str, Any],
     checkpoint_file_path = os.path.join(args['checkpoints_path'], f'{checkpoint_file_name}.pkl')
     checkpoint = torch.load(checkpoint_file_path)
 
-    submission = pd.read_csv('./sample_submission.csv')
+    submission = pd.read_csv('/home/elicer/sample_submission.csv')
     test_file_names = submission['path'].tolist()
 
     preprocess = Preprocess()
@@ -103,9 +103,9 @@ def main(args: Dict[str, Any],
             prob = torch.sigmoid(logit)
             pred = (prob > threshold).float()
 
-        submission.loc[submission['path'] == test_file_name, 'label'] = 'real' if pred == 1.0 else 'fake'
+        submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred == 0.0 else 'real'
 
-    submission.to_csv('./sample_submission_test.csv', index=False)
+    submission.to_csv('/home/elicer/sample_submission_test.csv', index=False)
 
 
 if __name__ == '__main__':
