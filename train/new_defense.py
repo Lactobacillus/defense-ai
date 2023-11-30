@@ -64,8 +64,8 @@ class Stage1Trainer(object):
         self.aggr = Aggregator().to('cuda')
         self.aggr = torch.compile(self.aggr)
 
-        self.model_ema = EMA(self.model, decay = 0.999)
-        self.aggr_ema = EMA(self.aggr, decay = 0.999)
+        self.model_ema = EMA(self.model, decay = 0.9)
+        self.aggr_ema = EMA(self.aggr, decay = 0.9)
 
     def train(self,
             dataset: str = 'train',
@@ -124,7 +124,8 @@ class Stage1Trainer(object):
 
                 if idx % self.args['reset_freq'] == 0:
 
-                    self.aggr.reset_fc()
+                    # self.aggr.reset_fc()
+                    self.shrink_perturb()
 
                 if self.use_wandb:
 
@@ -223,6 +224,24 @@ class Stage1Trainer(object):
 
         return acc
 
+    def shrink_perturb(self,
+            shrink: float = 0.9,
+            perturb: float = 1e-3):
+
+        new_model = CustomResNet50().to('cuda')
+        new_aggr = Aggregator().to('cuda')
+
+        for p1, p2 in zip(*[new_model.parameters(), self.model.parameters()]):
+            
+            p1.data = deepcopy(shrink * p2.data + perturb * p1.data)
+
+        for p1, p2 in zip(*[new_aggr.parameters(), self.aggr.parameters()]):
+            
+            p1.data = deepcopy(shrink * p2.data + perturb * p1.data)
+
+        self.model = new_model
+        self.aggr = new_aggr
+
     def save_checkpoint(self,
             filename: Optional[str] = None) -> None:
 
@@ -239,3 +258,4 @@ class Stage1Trainer(object):
     def __del__(self) -> None:
 
         wandb.finish(0)
+
