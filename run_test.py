@@ -15,6 +15,8 @@ from torchvision.transforms.functional import to_pil_image
 from model.model import CustomResNet50, Aggregator, LinearLayer
 from data.dataset import VideoStage1Data, VideoPretrainData
 
+from data.preprocess import Preprocess
+
 def make_video_numpy(video_path, frame_length) -> np.ndarray:
     fn = video_path
     video = video2numpy(fn)
