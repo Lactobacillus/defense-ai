@@ -134,7 +134,8 @@ class Stage1Trainer(object):
     def evaluate(self,
             dataset: str = 'train',
             use_ema: bool = True,
-            threshold: float = 0.5) -> float:
+            threshold: float = 0.5,
+            num_iter: int = 0) -> float:
 
         self.model.eval()
         self.model = self.model.to('cuda')
@@ -162,6 +163,10 @@ class Stage1Trainer(object):
         total = 0
 
         for idx, batch in tqdm(enumerate(test_loader), total = len(test_loader)):
+
+            if num_iter > 0 and idx == num_iter:
+
+                break
 
             video = batch['video'].to('cuda')
             label = batch['label'].float().unsqueeze(-1).to('cuda')
