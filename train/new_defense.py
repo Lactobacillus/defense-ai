@@ -92,7 +92,7 @@ class Stage1Trainer(object):
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
                 video = batch['video'].to('cuda')
-                label = batch['label'].float().unsqueeze(-1).to('cuda')
+                label = batch['label'].bfloat16().unsqueeze(-1).to('cuda')
                 bs, fl, _, w, h = video.size()
                 video = video.view(bs * fl, 3, w, h)
 
@@ -117,6 +117,9 @@ class Stage1Trainer(object):
 
                     wandb.log({'train/stage1/loss': loss.item()})
 
+            self.evaluate('train', True)
+            self.evaluate('train', False)
+
             self.save_checkpoint('latest')
             self.save_checkpoint('epoch_{}'.format(epoch))
 
@@ -131,7 +134,8 @@ class Stage1Trainer(object):
     @torch.no_grad()
     def evaluate(self,
             dataset: str = 'train',
-            use_ema: bool = True) -> None:
+            use_ema: bool = True,
+            threshold: float = 0.5) -> float:
 
         self.model.eval()
         self.model = self.model.to('cuda')
@@ -145,7 +149,7 @@ class Stage1Trainer(object):
 
         test_loader = DataLoader(dataset = dset,
             batch_size = self.args['batch_size'],
-            shuffle = True,
+            shuffle = False,
             drop_last = False,
             num_workers = 4,
             pin_memory = True)
@@ -154,6 +158,9 @@ class Stage1Trainer(object):
 
             self.model_ema.apply_shadow()
             self.aggr_ema.apply_shadow()
+
+        correct = 0
+        total = 0
 
         for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
@@ -169,11 +176,25 @@ class Stage1Trainer(object):
                 emb = emb.view(bs, fl, d, w, h)
 
                 logit = self.aggr(emb)
+        
+            prob = torch.sigmoid(logit)
+            pred = (prob > threshold).float()
+            correct = correct + (pred == label).sum().item()
+            total = total + label.size(0)
+
+        acc = 100 * correct / total
+
+        if self.use_wandb:
+
+            if use_ema: wandb.log({'train/stage1/acc_ema': acc})
+            else: wandb.log({'train/stage1/acc': acc})
 
         if use_ema:
 
             self.model_ema.restore()
             self.aggr_ema.restore()
+
+        return acc
 
     def save_checkpoint(self,
             filename: Optional[str] = None) -> None:
@@ -182,6 +203,8 @@ class Stage1Trainer(object):
 
         checkpoint = {'model': self.model.cpu().state_dict(),
                     'aggr': self.aggr.cpu().state_dict(),
+                    'model_ema': self.model_ema.state_dict(),
+                    'aggr_ema': self.aggr_ema.state_dict(),
                     'args': self.args}
 
         torch.save(checkpoint, os.path.join(self.result_root, '{}.pkl'.format(filename)))

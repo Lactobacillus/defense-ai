@@ -78,3 +78,8 @@ class EMA(object):
                 param.data = self.backup[name]
 
         self.backup = dict()
+
+    def state_dict(self):
+
+        return self.shadow.cpu().state_dict()
+        
