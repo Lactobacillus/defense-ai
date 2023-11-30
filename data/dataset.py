@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, IterableDataset, DataLoader
+import torchvision as tv
+import torchvision.transforms as transforms
 
 
 class VideoPretrainData(Dataset):
@@ -95,7 +97,7 @@ class VideoStage1Data(Dataset):
     def __getitem__(self,
             idx: int) -> Dict[str, Any]:
 
-        fn, label = self.pair(idx)
+        fn, label = self.pair[idx]
         video = self.video2tensor(fn)
 
         return {'video': video, 'label': label}
@@ -123,8 +125,15 @@ class VideoStage1Data(Dataset):
         return buf
 
     def video2tensor(self,
-            filename: str) -> torch.Tensor:
+            filename: str,
+            output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
 
-        video, _, _ = io.read_video(filename)
+        video, _, _ = tv.io.read_video(filename)
+
+        transform = transforms.Compose([
+            transforms.Resize(output_size),
+            transforms.ToTensor()])
+
+        video_tensor = torch.stack([transform(frame) for frame in video])
 
         return video
