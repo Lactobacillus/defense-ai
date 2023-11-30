@@ -14,7 +14,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 from transformers import AutoImageProcessor
 
-from model.model import CustomResNet50, Aggregator
+from model.model import CustomResNet50, Aggregator, LinearLayer
 from data.dataset import VideoStage1Data
 from train.util import LossAccumulator
 
@@ -54,11 +54,14 @@ class Stage1Trainer(object):
     def build_model(self) -> None:
 
         self.processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50')
-        self.model = CustomResNet50().to('cuda')
-        self.model = torch.compile(self.model)
+        self.model = CustomResNet50(pool=True).to('cuda')
+        #self.model = torch.compile(self.model)
 
         self.aggr = Aggregator().to('cuda')
-        self.aggr = torch.compile(self.aggr)
+        #self.aggr = torch.compile(self.aggr)
+
+        self.linear = LinearLayer().to('cuda')
+        #self.linear = torch.compile(self.model)
 
     def train(self,
             dataset: str = 'train',
@@ -66,8 +69,8 @@ class Stage1Trainer(object):
 
         self.model.train()
         self.model = self.model.to('cuda')
-        self.aggr.train()
-        self.aggr = self.aggr.to('cuda')
+        # self.aggr.train()
+        # self.aggr = self.aggr.to('cuda')
 
         match dataset:
 
@@ -93,19 +96,23 @@ class Stage1Trainer(object):
                 video = batch['video']
                 label = batch['label'].to('cuda')
                 bs, fl, _, w, h = video.size()
+                #print('video.shape', video.shape) # [1, 1, 3, 128, 128]
                 video = video.view(bs * fl, 3, w, h)
 
-                with autocast(dtype = torch.bfloat16):
+                with autocast(dtype = torch.float16):
 
                     pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
+#                   print('pixel.shape', pixel.shape) # [1, 3, 244, 244]
                     emb = self.model(pixel) # (bs * fl, dim, w, h)
-                    bsfl, d, w, h = emb.size()
-                    emb = emb.view(bs, fl, d, w, h)
+#                   print('emb.shape', emb.shape) # ([1, 2048])
+                    # bsfl, d, w, h = emb.size()
+                    # emb = emb.view(bs, fl, d, w, h)
 
-                    logit = self.aggr(emb)
+                    logit = self.linear(emb)
                     prob = torch.sigmoid(logit)
+                    prob = torch.squeeze(prob, 0)
 
-                    loss = F.binary_cross_entropy(prob, label)
+                    loss = F.binary_cross_entropy_with_logits(prob, label.float())
 
                 optimizer.zero_grad(set_to_none = True)
                 grad_scaler.scale(loss).backward()
@@ -113,8 +120,10 @@ class Stage1Trainer(object):
                 grad_scaler.update()
 
                 if self.use_wandb:
-
                     wandb.log({'train/pretrain': loss.item()})
+
+                if idx % 1000 == 0:
+                    print(f'[LOG] loss : {loss}')
 
             epoch_end = timeit.default_timer()
 
@@ -135,5 +144,5 @@ class Stage1Trainer(object):
         torch.save(checkpoint, os.path.join(self.result_root, '{}.pkl'.format(filename)))
 
     def __del__(self) -> None:
-
-        wandb.finish(0)
+        ...
+        # wandb.finish(0)

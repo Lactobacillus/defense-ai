@@ -20,6 +20,7 @@ class CustomResNet50(nn.Module):
 
         self.pool = pool
         self.resnet = resnet50(weights = ResNet50_Weights.IMAGENET1K_V2)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
     def forward(self,
             x: torch.Tensor) -> torch.Tensor:
@@ -75,4 +76,19 @@ class Aggregator(nn.Module):
         x = self.avgpool(x)
         x = self.fc(x)
 
+        return x
+
+
+class LinearLayer(nn.Module):
+
+    def __init__(self,
+            pool: bool = False) -> None:
+
+        super(LinearLayer, self).__init__()
+
+        self.linear = nn.Linear(2048, 1)
+
+    def forward(self, x):
+        # 입력 데이터를 선형 레이어에 통과시킵니다.
+        x = self.linear(x)
         return x
