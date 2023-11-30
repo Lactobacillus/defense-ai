@@ -143,7 +143,7 @@ def main(args: Dict[str, Any],
 
     submission.to_csv('/home/elicer/sample_submission_{}.csv'.format(name), index=False)
 
-    with open('/home/elicer/logit_{}.pkl'.format(name)) as fs:
+    with open('/home/elicer/logit_{}.pkl'.format(name), 'wb') as fs:
 
         pickle.dump(logit_dict, fs)
 
