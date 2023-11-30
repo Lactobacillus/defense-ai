@@ -55,7 +55,7 @@ class Stage1Trainer(object):
         full_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
         train_size = int(0.8 * len(full_data))
         test_size = len(full_data) - train_size
-        
+
         generator1 = torch.Generator().manual_seed(42)
         self.train_data, self.test_data = torch.utils.data.random_split(full_data, [train_size, test_size], generator=generator1)
 
@@ -91,6 +91,21 @@ class Stage1Trainer(object):
                 logit = self.linear(emb)
                 prob = torch.sigmoid(logit)
 
+                """
+                Voting
+                """
+                # final_prob = torch.mean(prob.view(bs, fl), dim=1)  # 평균으로 최종 결정
+                # final_pred = (final_prob > 0.5).float()  # 최종 예측
+
+                # # Loss 계산 (비디오 레벨)
+                # loss = F.binary_cross_entropy(final_prob, label)
+                # total_loss += loss.item()
+                # correct_predictions += (final_pred == label).sum().item()
+                # total_samples += bs
+
+                """
+                when not voting
+                """
                 loss = F.binary_cross_entropy_with_logits(prob, label)
                 total_loss += loss.item() * video.size(0)
                 predicted = (prob > 0.5).float()  # 예측된 클래스
