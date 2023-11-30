@@ -9,6 +9,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, IterableDataset, DataLoader
+import torchvision as tv
+import torchvision.transforms as transforms
+from torchvision.transforms.functional import to_pil_image
 
 
 class VideoPretrainData(Dataset):
@@ -80,15 +83,28 @@ class VideoStage1Data(Dataset):
 
         return len(self.pair)
 
+    # def __getitem__(self,
+    #         idx: int) -> Dict[str, Any]:
+
+    #     fn, label = self.pair[idx]
+    #     vid = self.video2numpy(fn)
+
+    #     start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
+    #     end = start + self.frame_length
+    #     cut = np.transpose(vid[start:end, ...], (0, 3, 1, 2))
+
+    #     return {'video': cut, 'label': label}
+
     def __getitem__(self,
             idx: int) -> Dict[str, Any]:
 
         fn, label = self.pair[idx]
-        vid = self.video2numpy(fn)
+        video = self.video2numpy(fn)
 
-        start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
+        start = random.randrange(0, video.shape[0] - self.frame_length - 1)
         end = start + self.frame_length
-        cut = np.transpose(vid[start:end, ...], (0, 3, 1, 2))
+        # video = video[start:end, ...]
+        cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
 
         return {'video': cut, 'label': label}
 
@@ -113,3 +129,20 @@ class VideoStage1Data(Dataset):
         cap.release()
 
         return buf
+
+    def video2tensor(self,
+            filename: str,
+            output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
+
+        video, _, _ = tv.io.read_video(filename, output_format = 'TCHW')
+
+        transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(output_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
+        ])
+
+        video = torch.stack([transform(frame) for frame in video])
+
+        return video

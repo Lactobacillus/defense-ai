@@ -61,7 +61,7 @@ class Aggregator(nn.Module):
         self.layer1 = md.ResBlock3d(64, 64)
         self.layer2 = md.ResBlock3d(64, 32)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(1024, 1)
+        self.fc = nn.Linear(512, 1)
 
     def forward(self,
             x: torch.Tensor) -> torch.Tensor:
@@ -72,23 +72,36 @@ class Aggregator(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         bs, ch, fl, w, h = x.size()
-        x = x.view(bs, ch * fl, w, h)
+        x = x.contiguous().view(bs, ch * fl, w, h)
         x = self.avgpool(x)
+        x = torch.flatten(x, 1)
         x = self.fc(x)
 
         return x
 
 
 class LinearLayer(nn.Module):
-
-    def __init__(self,
-            pool: bool = False) -> None:
-
+    def __init__(self, input_dim: int = 2048, hidden_dim: int = 512) -> None:
         super(LinearLayer, self).__init__()
-
-        self.linear = nn.Linear(2048, 1)
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(hidden_dim, 1)
 
     def forward(self, x):
-        # 입력 데이터를 선형 레이어에 통과시킵니다.
-        x = self.linear(x)
+        x = self.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
         return x
+    
+    # def __init__(self,
+    #         pool: bool = False) -> None:
+
+    #     super(LinearLayer, self).__init__()
+
+    #     self.linear = nn.Linear(2048, 1)
+
+    # def forward(self, x):
+    #     # 입력 데이터를 선형 레이어에 통과시킵니다.
+    #     x = self.linear(x)
+    #     return x

@@ -15,7 +15,7 @@ from torch.cuda.amp import GradScaler, autocast
 from transformers import AutoImageProcessor
 
 from model.model import CustomResNet50, Aggregator, LinearLayer
-from data.dataset import VideoStage1Data
+from data.dataset import VideoStage1Data, VideoPretrainData
 from train.util import LossAccumulator
 
 
@@ -41,9 +41,10 @@ class Stage1Trainer(object):
     def build_wandb(self) -> None:
 
         os.makedirs(os.path.join(self.args['result_path'], self.args['exp_name'], 'wandb'), exist_ok = True)
-        exp_name = self.args.get('exp_name', 'default_name')
-        wandb.init(name = exp_name, project = 'defense-ai', entity = self.args['wandb_entity'],
-                    dir = os.path.join(self.args['result_path'], exp_name),
+
+
+        wandb.init(name = self.args['exp_name'], project = 'defense', entity = self.args['wandb_entity'],
+                    dir = os.path.join(self.args['result_path'], self.args['exp_name']),
                     config = self.args, config_exclude_keys = self.args['wandb_exclude'])
 
     def build_dataset(self) -> None:
@@ -83,20 +84,21 @@ class Stage1Trainer(object):
             drop_last = False,
             num_workers = 4,
             pin_memory = True)
-        optimizer = torch.optim.AdamW(list(self.model.parameters()), lr = self.args['lr'])
+        optimizer = torch.optim.AdamW(list(self.aggr.parameters()) + list(self.model.parameters()), lr = self.args['lr'])
         grad_scaler = GradScaler()
 
         for epoch in range(self.args['epoch']):
 
             self.model.train()
+            self.aggr.train()
             epoch_start = timeit.default_timer()
 
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
-                video = batch['video']
-                label = batch['label'].to('cuda')
+                video = batch['video'].to('cuda')
+                label = batch['label'].float().unsqueeze(-1).to('cuda')
                 bs, fl, _, w, h = video.size()
-                #print('video.shape', video.shape) # [1, 1, 3, 128, 128]
+                #print('video.shape', video.shape) # [128, 1, 3, 128, 128]
                 video = video.view(bs * fl, 3, w, h)
 
                 with autocast(dtype = torch.float16):
@@ -110,11 +112,22 @@ class Stage1Trainer(object):
 
                     logit = self.linear(emb)
                     prob = torch.sigmoid(logit)
-                    prob = torch.squeeze(prob, 1)
+                    # prob = torch.squeeze(prob, 1)
 
                     # print(prob.shape, prob, label.shape, label)
 
-                    loss = F.binary_cross_entropy_with_logits(prob, label.float())
+                    loss = F.binary_cross_entropy_with_logits(prob, label)
+# =======
+#                     with torch.no_grad():
+
+#                         # video = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
+#                         emb = self.model(video) # (bs * fl, dim, w, h)
+#                         bsfl, d, w, h = emb.size()
+#                         emb = emb.view(bs, fl, d, w, h)
+
+#                     logit = self.aggr(emb)
+#                     loss = F.binary_cross_entropy_with_logits(logit, label)
+# >>>>>>> pretrain
 
                 optimizer.zero_grad(set_to_none = True)
                 grad_scaler.scale(loss).backward()
@@ -122,10 +135,12 @@ class Stage1Trainer(object):
                 grad_scaler.update()
 
                 if self.use_wandb:
-                    wandb.log({'train/pretrain': loss.item()})
+                    wandb.log({'train/stage1/loss': loss.item()})
+            
+            self.save_checkpoint('latest')
+            self.save_checkpoint('epoch_{}'.format(epoch))
 
-                if idx % 1000 == 0:
-                    print(f'[LOG] loss : {loss}')
+               
 
             epoch_end = timeit.default_timer()
 
@@ -141,7 +156,12 @@ class Stage1Trainer(object):
         if not filename: filename = 'checkpoint'
 
         checkpoint = {'model': self.model.cpu().state_dict(),
+                      'linear': self.linear.cpu().state_dict(),
+                    # 'aggr': self.aggr.cpu().state_dict(),
                     'args': self.args}
+        
+        self.model.to('cuda')
+        self.linear.to('cuda')
 
         torch.save(checkpoint, os.path.join(self.result_root, '{}.pkl'.format(filename)))
 
