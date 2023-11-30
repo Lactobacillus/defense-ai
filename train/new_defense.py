@@ -60,10 +60,10 @@ class Stage1Trainer(object):
     def build_model(self) -> None:
 
         self.model = CustomResNet50().to('cuda')
-        self.model = torch.compile(self.model)
+        #self.model = torch.compile(self.model)
 
         self.aggr = Aggregator().to('cuda')
-        self.aggr = torch.compile(self.aggr)
+        #self.aggr = torch.compile(self.aggr)
 
         self.model_ema = EMA(self.model, decay = 0.9)
         self.aggr_ema = EMA(self.aggr, decay = 0.9)
@@ -123,10 +123,10 @@ class Stage1Trainer(object):
                     self.model_ema.update()
                     self.aggr_ema.update()
 
-                if idx > 0 and idx % self.args['reset_freq'] == 0:
+                #if idx > 0 and idx % self.args['reset_freq'] == 0:
 
                     # self.aggr.reset_fc()
-                    self.shrink_perturb()
+                    #self.shrink_perturb()
 
                 if self.use_wandb:
 

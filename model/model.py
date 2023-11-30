@@ -61,7 +61,7 @@ class Aggregator(nn.Module):
         self.layer1 = md.ResBlock3d(64, 64)
         self.layer2 = md.ResBlock3d(64, 32)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512, 1)
+        self.fc = nn.Linear(256, 1)
 
     def forward(self,
             x: torch.Tensor) -> torch.Tensor:
