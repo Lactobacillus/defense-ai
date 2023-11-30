@@ -10,7 +10,7 @@ from pathlib import Path
 home = str(Path.home())
 args = dict()
 
-args['exp_name'] = 'finetune'
+args['exp_name'] = 'stage1'
 args['result_path'] = os.path.join(home, 'temporary/')
 
 args['data_path'] = os.path.join(home, 'temporary/outputs_video')

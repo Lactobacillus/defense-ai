@@ -133,7 +133,7 @@ class VideoStage1Data(Dataset):
             filename: str,
             output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
 
-        video, _, _ = tv.io.read_video(filename, output_format = 'TCHW')
+        video, _, _ = tv.io.read_video(filename, output_format = 'TCHW', pts_unit = 'sec')
 
         transform = transforms.Compose([
             transforms.ToPILImage(),
