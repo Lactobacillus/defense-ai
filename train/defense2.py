@@ -76,10 +76,10 @@ class Stage2Trainer(object):
         self.aggr_teacher = copy.deepcopy(self.aggr)
         self.aggr.reset_fc()
 
-        #self.model = torch.compile(self.model)
-        #self.model_teacher = torch.compile(self.model_techer)
-        #self.aggr = torch.compile(self.aggr)
-        #self.aggr_teacher = torch.compile(self.aggr)_teacher
+        self.model = torch.compile(self.model)
+        self.model_teacher = torch.compile(self.model_techer)
+        self.aggr = torch.compile(self.aggr)
+        self.aggr_teacher = torch.compile(self.aggr)_teacher
 
     def train(self,
             dataset: str = 'train',
@@ -101,7 +101,8 @@ class Stage2Trainer(object):
             drop_last = False,
             num_workers = 4,
             pin_memory = True)
-        optimizer = torch.optim.AdamW(list(self.aggr.parameters()) + list(self.model.parameters()), lr = self.args['lr'])
+        # optimizer = torch.optim.AdamW(list(self.aggr.parameters()) + list(self.model.parameters()), lr = self.args['lr'])
+        optimizer = torch.optim.SGD(list(self.aggr.parameters()) + list(self.model.parameters()), lr = self.args['lr'], momentum = 0.9)
         grad_scaler = GradScaler()
 
         for epoch in range(self.args['epoch']):
@@ -255,9 +256,9 @@ class Stage2Trainer(object):
             shrink: float = 0.9,
             perturb: float = 1e-3):
 
-        for p in self.model.parameters():
+        # for p in self.model.parameters():
             
-            p.data = shrink * p + perturb * torch.randn_like(p)
+        #     p.data = shrink * p + perturb * torch.randn_like(p)
 
         for p in self.aggr.parameters():
             
