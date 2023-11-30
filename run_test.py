@@ -58,7 +58,9 @@ def main(args: Dict[str, Any],
 
     preprocess = Preprocess()
 
-    for test_file_name in test_file_names:
+    for idx, test_file_name in enumerate(test_file_names):
+        
+        print('[info] {}/{}'.format(idx, len(test_file_names)))
         # face video 만들기
         video_path = os.path.join(args['data_test_path'], test_file_name)
         face_video_path = os.path.join(args['data_path'], 'test', test_file_name)
