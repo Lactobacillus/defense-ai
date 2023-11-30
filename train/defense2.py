@@ -90,6 +90,11 @@ class Stage2Trainer(object):
         self.aggr.train()
         self.aggr = self.aggr.to('cuda')
 
+        self.model_teacher.eval()
+        self.model_teacher = self.model_teacher.to('cuda')
+        self.aggr_teacher.eval()
+        self.aggr_teacher = self.aggr_teacher.to('cuda')
+
         match dataset:
 
             case 'train': dset = self.train_data
