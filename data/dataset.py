@@ -146,3 +146,85 @@ class VideoStage1Data(Dataset):
         video = torch.stack([transform(frame) for frame in video])
 
         return video
+
+
+# 영상 읽는 것을 배치로
+class TestDataset(Dataset):
+
+    def __init__(self,
+            data_path: str,
+            frame_length: int = 16,
+            split: str = 'train') -> None:
+
+        self.data_path = data_path
+        self.frame_length = frame_length
+
+        test_list = os.listdir(data_path)
+        self.test_fiie_list = test_list
+
+    def __len__(self) -> int:
+
+        return len(self.test_fiie_list)
+
+    # def __getitem__(self,
+    #         idx: int) -> Dict[str, Any]:
+
+    #     fn, label = self.pair[idx]
+    #     vid = self.video2numpy(fn)
+
+    #     start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
+    #     end = start + self.frame_length
+    #     cut = np.transpose(vid[start:end, ...], (0, 3, 1, 2))
+
+    #     return {'video': cut, 'label': label}
+
+    def __getitem__(self,
+            idx: int) -> Dict[str, Any]:
+        fn = self.test_file_list[idx]
+        video = self.video2numpy(fn)
+
+        start = random.randrange(0, video.shape[0] - self.frame_length - 1)
+        end = start + self.frame_length
+        # video = video[start:end, ...]
+        cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
+
+        return {'video': cut}
+
+    def video2numpy(self,
+            filepath: str) -> np.ndarray:
+
+        cap = cv2.VideoCapture(filepath)
+        frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        
+        buf = np.empty((frameCount, frameHeight, frameWidth, 3), np.dtype('uint8'))
+        
+        fc = 0
+        ret = True
+
+        while (fc < frameCount  and ret):
+            
+            ret, buf[fc] = cap.read()
+            fc += 1
+
+        cap.release()
+
+        return buf
+
+    def video2tensor(self,
+            filename: str,
+            output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
+
+        video, _, _ = tv.io.read_video(filename, output_format = 'TCHW')
+
+        transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(output_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
+        ])
+
+        video = torch.stack([transform(frame) for frame in video])
+
+        return video

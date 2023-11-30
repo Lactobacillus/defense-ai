@@ -7,16 +7,18 @@ import numpy as np
 import pandas as pd
 import random
 import cv2
+import tqdm
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
 import torchvision as tv
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import to_pil_image
+from torch.utils.data import Dataset, DataLoader
 
 from transformers import AutoImageProcessor
 
 from model.model import CustomResNet50, Aggregator, LinearLayer
-from data.dataset import VideoStage1Data, VideoPretrainData
+from data.dataset import VideoStage1Data, VideoPretrainData, TestDataset
 
 from data.preprocess import Preprocess
 
@@ -51,6 +53,30 @@ def video2numpy(filepath: str) -> np.ndarray:
 
     return buf
 
+def process_test(input_folder: str, output_folder: str, preprocess: Preprocess) -> None:
+    # output 폴더 생성
+    output_face_path = os.path.join(output_folder, 'face')
+    output_numpy_path = os.path.join(output_folder, 'numpy')
+
+    if not os.path.exists(output_face_path):
+        os.makedirs(output_face_path)
+    
+    if not os.path.exists(output_numpy_path):
+        os.makedirs(output_numpy_path)
+
+    video_files = glob.glob(os.path.join(input_folder, '*.mp4'))
+    video_files = sorted(video_files, key=lambda x: x)
+
+    # 각 비디오 파일에 대해 처리
+    for idx, video_file in enumerate(video_files):
+        filename = os.path.basename(video_file)
+        output_face_file = os.path.join(output_face_path, filename)
+        output_numpy_file = os.path.join(output_numpy_path, filename.replace('.mp4', '.npy'))
+
+        preprocess.make_face_video(src_video_path=video_file, dst_video_path=output_face_file, dst_numpy_path=output_numpy_file)
+        preprocess.print_log(f'{idx+1}/{len(video_files)} 영상 처리 작업 완료')
+
+
 def main(args: Dict[str, Any],
         checkpoint_file_name: int,
         use_ema:bool,
@@ -65,55 +91,46 @@ def main(args: Dict[str, Any],
 
     preprocess = Preprocess()
 
-    for idx, test_file_name in enumerate(test_file_names):
-        if idx % 100 == 0:
-            print(f'{idx+1}/{len(test_file_names)} 작업 중')
-        # face video 만들기
-        video_path = os.path.join(args['data_test_path'], test_file_name)
-        face_video_path = os.path.join(args['data_path'], 'test', test_file_name)
+    # face video 만들기
+    process_test(input_folder=args['data_test_path'], output_folder=os.path.join(args['data_path'], 'test'), preprocess)
+    
+    dset = TestDataset(data_path==os.path.join(self.args['data_path'], 'test/face'), self.args['frame_length'])
+    train_loader = DataLoader(dataset = dset,
+            batch_size = self.args['batch_size'],
+            shuffle = False,
+            drop_last = False,
+            num_workers = 4,
+            pin_memory = True)
+    
+    # 모델 불러오기
+    processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50')
+    model = CustomResNet50(pool=True).to('cuda')
+    model.load_state_dict(checkpoint['model'])
+    model.eval()
+    
+    linear = LinearLayer().to('cuda')
+    linear.load_state_dict(checkpoint['linear'])
+    linear.eval()
 
-        os.makedirs(os.path.join(args['data_path'], 'test'), exist_ok=True)
-
-        success = preprocess.make_face_video(src_video_path=video_path, dst_video_path=face_video_path)
-
-        if not success:
-            submission.loc[submission['path'] == test_file_name, 'label'] = 'real'
-            continue
-
-        # 모델 불러오기
-        processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50')
-        model = CustomResNet50(pool=True).to('cuda')
-        model.load_state_dict(checkpoint['model'])
-        model.eval()
-        
-        linear = LinearLayer().to('cuda')
-        linear.load_state_dict(checkpoint['linear'])
-        linear.eval()
-        # new_checkpoint = dict()
-        # for key, val in checkpoint['model'].items():
-
-        #     new_checkpoint[key.replace('_orig_mod.', '')] = val
-
-        # model.load_state_dict(new_checkpoint)
-
+    for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
         #inference 하기
         with torch.no_grad():
-            video = make_video_numpy(face_video_path, 64)
-            video = torch.tensor(video).to('cuda')
-            fl, _, w, h = video.size()
-            video = video.view(fl, 3, w, h)
-
+            video = batch['video'].to('cuda')
+            bs, fl, _, w, h = video.size()
+            video = video.view(bs * fl, 3, w, h)
             pixel = processor(video, return_tensors = 'pt').pixel_values.to('cuda')
             emb = model(pixel) # (bs * fl, dim, w, h)
 
             logit = linear(emb)
             prob = torch.sigmoid(logit)
-            pred = (prob > threshold).float().mean()
+            prob = prob.view(bs, fl, 1)
+            print(prob.shape)
+            # pred = (prob > threshold).float().mean()
 
-        submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred < 0.5 else 'real'
+       submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred < 0.5 else 'real'
 
     submission.to_csv('/home/elicer/sample_submission_test.csv', index=False)
-
+        
 
 if __name__ == '__main__':
 
