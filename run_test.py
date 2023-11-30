@@ -52,7 +52,7 @@ def main(args: Dict[str, Any],
         threshold: float = 0.5) -> None:
 
     checkpoint_file_name = checkpoint_file_name.replace('.pkl', '')
-    checkpoint_file_path = os.path.join(args['result_path'], f'{checkpoint_file_name}.pkl')
+    checkpoint_file_path = os.path.join(args['result_path'], args['exp_name'], f'{checkpoint_file_name}.pkl')
     checkpoint = torch.load(checkpoint_file_path)
 
     submission = pd.read_csv('/home/elicer/sample_submission.csv')
