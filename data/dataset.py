@@ -164,7 +164,7 @@ class TestDataset(Dataset):
 
     def __len__(self) -> int:
 
-        return len(self.test_file_list)
+        return len(self.pair)
 
     # def __getitem__(self,
     #         idx: int) -> Dict[str, Any]:

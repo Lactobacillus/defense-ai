@@ -14,7 +14,7 @@ import torchvision as tv
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import to_pil_image
 from torch.utils.data import Dataset, DataLoader
-from glob import glob
+import glob
 
 from transformers import AutoImageProcessor
 
@@ -95,7 +95,7 @@ def main(args: Dict[str, Any],
     # face video 만들기
     process_test(input_folder=args['data_test_path'], output_folder=os.path.join(args['data_path'], 'test'), preprocess=preprocess)
     
-    dset = TestDataset(data_path=os.path.join(args['data_path'], 'test/face'), args['frame_length'])
+    dset = TestDataset(data_path=os.path.join(args['data_path'], 'test/face'), frame_length=args['frame_length'])
     train_loader = DataLoader(dataset = dset,
             batch_size = args['batch_size'],
             shuffle = False,
@@ -130,7 +130,8 @@ def main(args: Dict[str, Any],
             pred = (prob > threshold).float()
             mean_prob = torch.mean(pred, dim=1) # torch.size([4, 1])
 
-       submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred < 0.5 else 'real'
+        for idx, fn in enumerate(files):
+            submission.loc[submission['path'] == fn, 'label'] = 'fake' if mean_prob[idx, 0] < 0.5 else 'real'
 
     submission.to_csv('/home/elicer/sample_submission_test.csv', index=False)
         
