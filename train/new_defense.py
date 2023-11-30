@@ -82,7 +82,7 @@ class Stage1Trainer(object):
         if use_ema:
 
             self.model_ema.apply_shadow()
-            self.linear.apply_shadow()
+            self.linear_ema.apply_shadow()
 
         total_loss = 0.0
         correct_predictions = 0
@@ -91,7 +91,7 @@ class Stage1Trainer(object):
         with torch.no_grad():  # 그래디언트 계산 비활성화
             for batch in DataLoader(dataset, batch_size=self.args['batch_size'], shuffle=False):
                 video = batch['video'].to('cuda')
-                label = batch['label'].float().unsqueeze(-1).to('cuda')
+                label = batch['label'].flatten().float().unsqueeze(-1).to('cuda')
                 bs, fl, _, w, h = video.size()
                 video = video.view(bs * fl, 3, w, h)
 
@@ -167,7 +167,7 @@ class Stage1Trainer(object):
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
                 video = batch['video'].to('cuda')
-                label = batch['label'].float().unsqueeze(-1).to('cuda')
+                label = batch['label'].flatten().float().unsqueeze(-1).to('cuda')
                 bs, fl, _, w, h = video.size()
                 #print('video.shape', video.shape) # [128, 1, 3, 128, 128]
                 video = video.view(bs * fl, 3, w, h)

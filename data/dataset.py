@@ -106,7 +106,7 @@ class VideoStage1Data(Dataset):
         # video = video[start:end, ...]
         cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
 
-        return {'video': cut, 'label': label}
+        return {'video': cut, 'label': np.array([label] * self.frame_length)}
 
     def video2numpy(self,
             filepath: str) -> np.ndarray:
