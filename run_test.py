@@ -19,7 +19,7 @@ import glob
 from transformers import AutoImageProcessor
 
 from model.model import CustomResNet50, Aggregator, LinearLayer
-from data.dataset import VideoStage1Data, VideoPretrainData, TestDataset
+from data.dataset import VideoStage1Data, VideoPretrainData, TestDataset, TestNumpyDataset
 
 from data.preprocess import Preprocess
 
@@ -95,13 +95,23 @@ def main(args: Dict[str, Any],
     # face video 만들기
     process_test(input_folder=args['data_test_path'], output_folder=os.path.join(args['data_path'], 'test'), preprocess=preprocess)
     
-    dset = TestDataset(data_path=os.path.join(args['data_path'], 'test/face'), frame_length=args['frame_length'])
-    train_loader = DataLoader(dataset = dset,
-            batch_size = args['batch_size'],
-            shuffle = False,
-            drop_last = False,
-            num_workers = 4,
-            pin_memory = True)
+    if args['numpy_data_set'] is False:
+        dset = TestDataset(data_path=os.path.join(args['data_path'], 'test/face'), frame_length=args['frame_length'])
+        train_loader = DataLoader(dataset = dset,
+                batch_size = args['batch_size'],
+                shuffle = False,
+                drop_last = False,
+                num_workers = 4,
+                pin_memory = True)
+
+    else:
+        numpydset = TestNumpyDataset(data_path=os.path.join(args['data_path'], 'test/numpy'), frame_length=args['frame_length'])
+        train_loader = DataLoader(dataset = numpydset,
+                batch_size = args['batch_size'],
+                shuffle = False,
+                drop_last = False,
+                num_workers = 4,
+                pin_memory = True)
     
     # 모델 불러오기
     processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50')

@@ -17,6 +17,7 @@ args['result_path'] = os.path.join(home, 'temporary_reset/')
 args['data_path'] = os.path.join(home, 'dataset/only_face')
 args['checkpoints_path'] = '/home/elicer/temporary'
 args['data_test_path'] = '/mnt/elice/dataset/test'
+args['numpy_data_set'] = True
 
 args['frame_length'] = 64
 args['batch_size'] = 4
