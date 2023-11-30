@@ -141,9 +141,9 @@ def main(args: Dict[str, Any],
 
         submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred == 1.0 else 'real'
 
-    submission.to_csv('/home/elicer/sample_submission_{}.csv'.format(args['name']), index=False)
+    submission.to_csv('/home/elicer/sample_submission_{}.csv'.format(name), index=False)
 
-    with open('/home/elicer/logit_{}.pkl'.format(args['name'])) as fs:
+    with open('/home/elicer/logit_{}.pkl'.format(name)) as fs:
 
         pickle.dump(logit_dict, fs)
 
