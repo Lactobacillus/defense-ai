@@ -6,6 +6,7 @@ import torch
 import numpy as np
 import pandas as pd
 import random
+import pickle
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
 import torchvision as tv
@@ -57,6 +58,8 @@ def main(args: Dict[str, Any],
     test_file_names = submission['path'].tolist()
 
     preprocess = Preprocess()
+
+    logit_dict = dict()
 
     for idx, test_file_name in enumerate(test_file_names):
         
@@ -133,9 +136,15 @@ def main(args: Dict[str, Any],
             prob = torch.sigmoid(logit)
             pred = (prob > threshold).float()
 
+            logit_dict[test_file_name] = logit.item()
+
         submission.loc[submission['path'] == test_file_name, 'label'] = 'real' if pred == 1.0 else 'fake'
 
     submission.to_csv('/home/elicer/sample_submission_{}.csv'.format(args['name']), index=False)
+
+    with open('/home/elicer/logit_{}.pkl'.format(args['name'])) as fs:
+
+        pickle.dump(logit_dict, fs)
 
 
 # file 있으면 건너뛰기

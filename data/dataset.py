@@ -147,6 +147,61 @@ class VideoStage1Data(Dataset):
         return video
 
 
+class VideoStage2Data(Dataset):
+
+    def __init__(self,
+            data_path: str,
+            frame_length: int = 16,
+            split: str = 'train') -> None:
+
+        self.data_path = data_path
+        self.frame_length = frame_length
+
+        real_list = os.listdir(os.path.join(data_path, split, 'real'))
+        fake_list = os.listdir(os.path.join(data_path, split, 'fake'))
+        self.pair = [(os.path.join(data_path, split, 'real', fn), 1) for fn in real_list]
+        self.pair = self.pair + [(os.path.join(data_path, split, 'fake', fn), 0) for fn in fake_list]
+
+        with open(os.path.join(data_path, 'logit.pkl'), 'rb') as fs:
+
+            self.soft_label = pickle.load(fs)
+
+    def __len__(self) -> int:
+
+        return len(self.pair)
+
+    def __getitem__(self,
+            idx: int) -> Dict[str, Any]:
+
+        fn, label = self.pair[idx]
+        video = self.video2tensor(fn)
+        slabel = self.soft_label[fn]
+
+        start = random.randrange(0, video.size(0) - self.frame_length - 1)
+        end = start + self.frame_length
+        video = video[start:end, ...]
+
+        return {'video': video, 'label': label, 'slabel': slabel}
+
+    def video2tensor(self,
+            filename: str,
+            output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
+
+        video, _, _ = tv.io.read_video(filename, output_format = 'TCHW', pts_unit = 'sec')
+
+        transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(output_size),
+            Cutout(2, 16),
+            transforms.ToTensor(),
+            transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
+        ])
+
+        video = torch.stack([transform(frame) for frame in video])
+
+        return video
+
+
 class Cutout(object):
     def __init__(self, n_holes, length):
 

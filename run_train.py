@@ -19,7 +19,7 @@ def main(args: Dict[str, Any],
 
         case 2:
 
-            from train.new_defense import Stage2Trainer as Trainer
+            from train.defense2 import Stage2Trainer as Trainer
             
             trainer = Trainer(args)
             trainer.train('train')
