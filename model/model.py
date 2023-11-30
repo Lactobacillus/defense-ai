@@ -71,7 +71,8 @@ class Aggregator(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         bs, ch, fl, w, h = x.size()
-        x = self.avgpool(x.view(bs, ch * fl, w, h))
+        x = x.contiguous().view(bs, ch * fl, w, h)
+        x = self.avgpool(x)
         x = self.fc(x)
 
         return x
