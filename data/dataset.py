@@ -35,7 +35,7 @@ class VideoPretrainData(Dataset):
         fn = self.fn_list[idx]
         vid = self.video2numpy(os.path.join(self.data_path, fn))
 
-        start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
+        start = random.randrange(0, vid.shape[0] - self.frame_length + 1)
         end = start + self.frame_length
         cut = np.transpose(vid[start:end, ...], (0, 3, 1, 2))
 
@@ -101,7 +101,7 @@ class VideoStage1Data(Dataset):
         fn, label = self.pair[idx]
         video = self.video2numpy(fn)
 
-        start = random.randrange(0, video.shape[0] - self.frame_length - 1)
+        start = random.randrange(0, video.shape[0] - self.frame_length + 1)
         end = start + self.frame_length
         # video = video[start:end, ...]
         cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
@@ -159,12 +159,12 @@ class TestDataset(Dataset):
         self.data_path = data_path
         self.frame_length = frame_length
 
-        test_list = os.listdir(data_path)
-        self.test_fiie_list = test_list
+        file_name_list = os.listdir(data_path)
+        self.pair = [(os.path.join(data_path, filename), filename) for filename in file_name_list]
 
     def __len__(self) -> int:
 
-        return len(self.test_fiie_list)
+        return len(self.test_file_list)
 
     # def __getitem__(self,
     #         idx: int) -> Dict[str, Any]:
@@ -180,15 +180,15 @@ class TestDataset(Dataset):
 
     def __getitem__(self,
             idx: int) -> Dict[str, Any]:
-        fn = self.test_file_list[idx]
+        fn, filename = self.pair[idx]
         video = self.video2numpy(fn)
 
-        start = random.randrange(0, video.shape[0] - self.frame_length - 1)
+        start = random.randrange(0, video.shape[0] - self.frame_length + 1)
         end = start + self.frame_length
         # video = video[start:end, ...]
         cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
 
-        return {'video': cut}
+        return {'video': cut, 'file_name': filename}
 
     def video2numpy(self,
             filepath: str) -> np.ndarray:

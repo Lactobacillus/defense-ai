@@ -18,8 +18,8 @@ args['data_path'] = os.path.join(home, 'dataset/only_face')
 args['checkpoints_path'] = '/home/elicer/temporary'
 args['data_test_path'] = '/mnt/elice/dataset/test'
 
-args['frame_length'] = 1
-args['batch_size'] = 128
+args['frame_length'] = 64
+args['batch_size'] = 4
 
 args['lr'] = 1e-4
 args['epoch'] = 100

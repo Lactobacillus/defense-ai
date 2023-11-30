@@ -7,13 +7,14 @@ import numpy as np
 import pandas as pd
 import random
 import cv2
-import tqdm
+from tqdm import tqdm
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
 import torchvision as tv
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import to_pil_image
 from torch.utils.data import Dataset, DataLoader
+from glob import glob
 
 from transformers import AutoImageProcessor
 
@@ -92,11 +93,11 @@ def main(args: Dict[str, Any],
     preprocess = Preprocess()
 
     # face video 만들기
-    process_test(input_folder=args['data_test_path'], output_folder=os.path.join(args['data_path'], 'test'), preprocess)
+    process_test(input_folder=args['data_test_path'], output_folder=os.path.join(args['data_path'], 'test'), preprocess=preprocess)
     
-    dset = TestDataset(data_path==os.path.join(self.args['data_path'], 'test/face'), self.args['frame_length'])
+    dset = TestDataset(data_path=os.path.join(args['data_path'], 'test/face'), args['frame_length'])
     train_loader = DataLoader(dataset = dset,
-            batch_size = self.args['batch_size'],
+            batch_size = args['batch_size'],
             shuffle = False,
             drop_last = False,
             num_workers = 4,
@@ -116,6 +117,8 @@ def main(args: Dict[str, Any],
         #inference 하기
         with torch.no_grad():
             video = batch['video'].to('cuda')
+            files = batch['file_name']
+            print(len(files), files)
             bs, fl, _, w, h = video.size()
             video = video.view(bs * fl, 3, w, h)
             pixel = processor(video, return_tensors = 'pt').pixel_values.to('cuda')
@@ -124,8 +127,8 @@ def main(args: Dict[str, Any],
             logit = linear(emb)
             prob = torch.sigmoid(logit)
             prob = prob.view(bs, fl, 1)
-            print(prob.shape)
-            # pred = (prob > threshold).float().mean()
+            pred = (prob > threshold).float()
+            mean_prob = torch.mean(pred, dim=1) # torch.size([4, 1])
 
        submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred < 0.5 else 'real'
 
