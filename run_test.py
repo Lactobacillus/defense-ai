@@ -30,7 +30,6 @@ def make_video_tensor(video_path, frame_length) -> torch.Tensor:
 
 def video2tensor(
         filename: str,
-        name: str,
         output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
 
     video, _, _ = tv.io.read_video(filename, output_format = 'TCHW', pts_unit = 'sec')
@@ -49,6 +48,7 @@ def video2tensor(
 def main(args: Dict[str, Any],
         checkpoint_file_name: int,
         use_ema:bool,
+        name: str,
         threshold: float = 0.5) -> None:
 
     checkpoint_file_name = checkpoint_file_name.replace('.pkl', '')
