@@ -49,13 +49,15 @@ class Stage1Trainer(object):
                     config = self.args, config_exclude_keys = self.args['wandb_exclude'])
 
     def build_dataset(self) -> None:
-
+        
         # self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
         # self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
         full_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
         train_size = int(0.8 * len(full_data))
         test_size = len(full_data) - train_size
-        self.train_data, self.test_data = torch.utils.data.random_split(full_data, [train_size, test_size])
+        
+        generator1 = torch.Generator().manual_seed(42)
+        self.train_data, self.test_data = torch.utils.data.random_split(full_data, [train_size, test_size], generator=generator1)
 
 
     def build_model(self) -> None:
@@ -185,7 +187,7 @@ class Stage1Trainer(object):
             train_loss, train_accuracy = self.evaluate(self.train_data)
             val_loss, val_accuracy = self.evaluate(self.test_data)
 
-            if epoch % 2 == 0:
+            if idx % 2 == 0:
 
                 self.linear.reset_layer()
 
