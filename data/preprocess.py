@@ -65,15 +65,15 @@ class Preprocess:
                 faces = self.insight_face_app.get(frame)
                 if len(faces) != 1:
                     self.print_log('얼굴 탐지 실패 시 다음 프레임으로 넘어감')
-                    continue
-
-                bbox = faces[0].bbox.astype(int)
-                # 10% 마진 추가
-                width = bbox[2] - bbox[0]
-                height = bbox[3] - bbox[1]
-                margin_w, margin_h = width * 0.05, height * 0.05
-                fixed_bbox = [max(bbox[0] - margin_w, 0), max(bbox[1] - margin_h, 0),
-                            min(bbox[2] + margin_w, frame.shape[1]), min(bbox[3] + margin_h, frame.shape[0])]
+                    fixed_bbox = [170, 80, 310, 410]
+                else:
+                    bbox = faces[0].bbox.astype(int)
+                    # 10% 마진 추가
+                    width = bbox[2] - bbox[0]
+                    height = bbox[3] - bbox[1]
+                    margin_w, margin_h = width * 0.05, height * 0.05
+                    fixed_bbox = [max(bbox[0] - margin_w, 0), max(bbox[1] - margin_h, 0),
+                                min(bbox[2] + margin_w, frame.shape[1]), min(bbox[3] + margin_h, frame.shape[0])]
             
             cropped_face = frame[int(fixed_bbox[1]):int(fixed_bbox[3]), int(fixed_bbox[0]):int(fixed_bbox[2])]
             
@@ -138,9 +138,18 @@ class Preprocess:
             width : output video 가로
             height : output video 세로
         """
+
+        if os.path.exists(dst_video_path):
+            self.print_log(f"{dst_video_path}가 이미 존재해서 face_video 생성을 skip 합니다.")
+            return True
+
         self.src_video_path = src_video_path
         self.dst_video_path = dst_video_path
         self.output_size = (width, height)
+
+        if os.path.exists(dst_video_path):
+            self.print_log(f"{dst_video_path}가 이미 존재해서 face_video 생성을 skip 합니다.")
+            return True
 
         frames = self.video2numpy(extract_frame_num=extract_frame_num)
         self.print_log(f'Original video shape : [{len(frames)}, {frames[0].shape}]')
