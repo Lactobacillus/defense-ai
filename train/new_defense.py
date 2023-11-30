@@ -119,8 +119,8 @@ class Stage1Trainer(object):
 
             self.save_checkpoint('latest')
             self.save_checkpoint('epoch_{}'.format(epoch))
-            self.evaluate('train', True)
-            self.evaluate('train', False)
+            self.evaluate('train', True, 0.5, 5)
+            self.evaluate('train', False, 0.5, 5)
 
             epoch_end = timeit.default_timer()
 
