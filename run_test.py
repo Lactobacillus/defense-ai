@@ -91,7 +91,7 @@ def main(args: Dict[str, Any],
     if args['logits_extract'] is True:
         preprocess = Preprocess()
         # face video 만들기
-        process_video(input_folder=os.path.join(args['data_path'], 'train/real'), output_folder=os.path.join(args['data_path'], 'train/real'), preprocess=preprocess)
+        process_video(input_folder=os.path.join(args['data_train_path'], 'real'), output_folder=os.path.join(args['data_path'], 'train/real'), preprocess=preprocess)
         
         logits_path = os.path.join(args['data_path'], 'train/real/logits')
         
