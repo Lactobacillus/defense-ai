@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 import timeit
 import wandb
 import numpy as np
@@ -46,8 +47,15 @@ class Stage1Trainer(object):
 
     def build_dataset(self) -> None:
 
-        self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
-        self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
+        if 'split' in self.args['data_path']:
+
+            self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'], split = 'train')
+            self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'], split = 'valid')
+
+        else:
+
+            self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'], split = 'train')
+            self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'], split = 'train')
 
     def build_model(self) -> None:
 
@@ -57,8 +65,8 @@ class Stage1Trainer(object):
         self.aggr = Aggregator().to('cuda')
         self.aggr = torch.compile(self.aggr)
 
-        self.model_ema = EMA(self.model, decay = 0.999)
-        self.aggr_ema = EMA(self.aggr, decay = 0.999)
+        self.model_ema = EMA(self.model, decay = 0.9)
+        self.aggr_ema = EMA(self.aggr, decay = 0.9)
 
     def train(self,
             dataset: str = 'train',
@@ -72,7 +80,7 @@ class Stage1Trainer(object):
         match dataset:
 
             case 'train': dset = self.train_data
-            case 'test': dset = self.test_data
+            case 'valid': dset = self.test_data
 
         train_loader = DataLoader(dataset = dset,
             batch_size = self.args['batch_size'],
@@ -110,8 +118,15 @@ class Stage1Trainer(object):
                 grad_scaler.step(optimizer)
                 grad_scaler.update()
 
-                self.model_ema.update()
-                self.aggr_ema.update()
+                if idx > 0 and idx % self.args['ema_update_freq'] == 0:
+
+                    self.model_ema.update()
+                    self.aggr_ema.update()
+
+                if idx > 0 and idx % self.args['reset_freq'] == 0:
+
+                    # self.aggr.reset_fc()
+                    self.shrink_perturb()
 
                 if self.use_wandb:
 
@@ -119,8 +134,18 @@ class Stage1Trainer(object):
 
             self.save_checkpoint('latest')
             self.save_checkpoint('epoch_{}'.format(epoch))
-            self.evaluate('train', True, 0.5, 5)
-            self.evaluate('train', False, 0.5, 5)
+
+            if 'split' in self.args['data_path']:
+
+                self.evaluate('train', True, 0.5, 5)
+                self.evaluate('train', False, 0.5, 5)
+                self.evaluate('valid', True, 0.5)
+                self.evaluate('valid', False, 0.5)
+
+            else:
+
+                self.evaluate('train', True, 0.5, 5)
+                self.evaluate('train', False, 0.5, 5)
 
             epoch_end = timeit.default_timer()
 
@@ -145,7 +170,7 @@ class Stage1Trainer(object):
         match dataset:
 
             case 'train': dset = self.train_data
-            case 'test': dset = self.test_data
+            case 'valid': dset = self.test_data
 
         test_loader = DataLoader(dataset = dset,
             batch_size = self.args['batch_size'],
@@ -190,8 +215,8 @@ class Stage1Trainer(object):
 
         if self.use_wandb:
 
-            if use_ema: wandb.log({'train/stage1/acc_ema': acc})
-            else: wandb.log({'train/stage1/acc': acc})
+            if use_ema: wandb.log({'train/stage1_{}/acc_ema'.format(dataset): acc})
+            else: wandb.log({'train/stage1_{}/acc'.format(dataset): acc})
 
         if use_ema:
 
@@ -199,6 +224,18 @@ class Stage1Trainer(object):
             self.aggr_ema.restore()
 
         return acc
+
+    def shrink_perturb(self,
+            shrink: float = 0.9,
+            perturb: float = 1e-3):
+
+        for p in self.model.parameters():
+            
+            p.data = shrink * p + perturb * torch.randn_like(p)
+
+        for p in self.aggr.parameters():
+            
+            p.data = shrink * p + perturb * torch.randn_like(p)
 
     def save_checkpoint(self,
             filename: Optional[str] = None) -> None:
@@ -216,3 +253,4 @@ class Stage1Trainer(object):
     def __del__(self) -> None:
 
         wandb.finish(0)
+
