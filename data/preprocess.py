@@ -181,6 +181,11 @@ class Preprocess:
             width : output video 가로
             height : output video 세로
         """
+
+        if os.path.exists(dst_video_path):
+            self.print_log(f"{dst_video_path}가 이미 존재해서 face_video 생성을 skip 합니다.")
+            return True
+
         self.src_video_path = src_video_path
         self.dst_video_path = dst_video_path
         self.output_size = (width, height)
@@ -203,8 +208,7 @@ class Preprocess:
             self.print_log('얼굴 비디오 생성에 실패하였습니다.')
 
         return success
-            print('[LOG] 얼굴 비디오 생성에 실패하였습니다.')
-    
+
     def RGB_mean_var(folder_path, frame_index=0):
         
         mean_squared_len = []
