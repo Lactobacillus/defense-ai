@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 import torchvision as tv
 import torchvision.transforms as transforms
+from torchvision.transforms.functional import to_pil_image
 
 
 class VideoPretrainData(Dataset):
@@ -128,12 +129,15 @@ class VideoStage1Data(Dataset):
             filename: str,
             output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
 
-        video, _, _ = tv.io.read_video(filename)
+        video, _, _ = tv.io.read_video(filename, output_format = 'TCHW')
 
         transform = transforms.Compose([
+            transforms.ToPILImage(),
             transforms.Resize(output_size),
-            transforms.ToTensor()])
+            transforms.ToTensor(),
+            transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
+            ])
 
-        video_tensor = torch.stack([transform(frame) for frame in video])
+        video_tensor = torch.stack([transform(to_pil_image(frame)) for frame in video])
 
         return video

@@ -99,9 +99,9 @@ class Stage1Trainer(object):
                 with autocast(dtype = torch.bfloat16):
 
                     with torch.no_grad():
-                        
-                        pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
-                        emb = self.model(pixel) # (bs * fl, dim, w, h)
+
+                        # video = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
+                        emb = self.model(video) # (bs * fl, dim, w, h)
                         bsfl, d, w, h = emb.size()
                         emb = emb.view(bs, fl, d, w, h)
 

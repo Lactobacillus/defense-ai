@@ -13,7 +13,7 @@ args = dict()
 args['exp_name'] = 'finetune'
 args['result_path'] = os.path.join(home, 'temporary/')
 
-args['data_path'] = '/mnt/elice/dataset'
+args['data_path'] = os.path.join(home, 'temporary/outputs_video')
 args['frame_length'] = 16
 args['batch_size'] = 4
 
