@@ -16,7 +16,7 @@ from transformers import AutoImageProcessor
 
 from model.model import CustomResNet50, LinearLayer
 from data.dataset import VideoStage1Data, VideoPretrainData
-from train.util import LossAccumulator
+from train.util import LossAccumulator, EMA
 from sklearn.model_selection import train_test_split
 
 
