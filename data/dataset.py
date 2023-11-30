@@ -80,17 +80,25 @@ class VideoStage1Data(Dataset):
 
         return len(self.pair)
 
+    # def __getitem__(self,
+    #         idx: int) -> Dict[str, Any]:
+
+    #     fn, label = self.pair[idx]
+    #     vid = self.video2numpy(fn)
+
+    #     start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
+    #     end = start + self.frame_length
+    #     cut = np.transpose(vid[start:end, ...], (0, 3, 1, 2))
+
+    #     return {'video': cut, 'label': label}
+
     def __getitem__(self,
             idx: int) -> Dict[str, Any]:
 
-        fn, label = self.pair[idx]
-        vid = self.video2numpy(fn)
+        fn, label = self.pair(idx)
+        video = self.video2tensor(fn)
 
-        start = random.randrange(0, vid.shape[0] - self.frame_length - 1)
-        end = start + self.frame_length
-        cut = np.transpose(vid[start:end, ...], (0, 3, 1, 2))
-
-        return {'video': cut, 'label': label}
+        return {'video': video, 'label': label}
 
     def video2numpy(self,
             filepath: str) -> np.ndarray:
@@ -113,3 +121,10 @@ class VideoStage1Data(Dataset):
         cap.release()
 
         return buf
+
+    def video2tensor(self,
+            filename: str) -> torch.Tensor:
+
+        video, _, _ = io.read_video(filename)
+
+        return video
