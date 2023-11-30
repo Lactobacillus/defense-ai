@@ -3,6 +3,9 @@ import sys
 from collections import defaultdict
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
+import torch
+import torch.nn.functional as F
+import torch.nn as nn
 
 class LossAccumulator(object):
 

@@ -82,7 +82,7 @@ class Stage1Trainer(object):
         if use_ema:
 
             self.model_ema.apply_shadow()
-            self.aggr_ema.apply_shadow()
+            self.linear.apply_shadow()
 
         total_loss = 0.0
         correct_predictions = 0
@@ -127,7 +127,7 @@ class Stage1Trainer(object):
         if use_ema:
 
             self.model_ema.restore()
-            self.aggr_ema.restore()
+            self.linear_ema.restore()
 
         return avg_loss, accuracy
 
