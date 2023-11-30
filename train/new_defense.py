@@ -72,10 +72,17 @@ class Stage1Trainer(object):
         self.model_ema = EMA(self.model, decay = 0.9)
         self.linear_ema = EMA(self.linear, decay = 0.9)
 
-    def evaluate(self, dataset):
+    def evaluate(self,
+            dataset,
+            use_ema: bool):
         
         self.model.eval()
         self.linear.eval()
+
+        if use_ema:
+
+            self.model_ema.apply_shadow()
+            self.aggr_ema.apply_shadow()
 
         total_loss = 0.0
         correct_predictions = 0
@@ -116,6 +123,11 @@ class Stage1Trainer(object):
 
         avg_loss = total_loss / total_samples
         accuracy = correct_predictions / total_samples
+
+        if use_ema:
+
+            self.model_ema.restore()
+            self.aggr_ema.restore()
 
         return avg_loss, accuracy
 
@@ -179,10 +191,10 @@ class Stage1Trainer(object):
                     self.model_ema.update()
                     self.linear_ema.update()
 
-                #if idx > 0 and idx % self.args['reset_freq'] == 0:
+                # if idx > 0 and idx % self.args['reset_freq'] == 0:
 
                     # self.linear.reset_layer()
-                    #self.shrink_perturb()
+                    # self.shrink_perturb()
 
                 if self.use_wandb:
                     wandb.log({'train/stage1/loss': loss.item()})
@@ -192,11 +204,15 @@ class Stage1Trainer(object):
             self.save_checkpoint('epoch_{}'.format(epoch))
             
             # 훈련 및 검증 손실과 정확도 계산
-            train_loss, train_accuracy = self.evaluate(self.train_data)
-            val_loss, val_accuracy = self.evaluate(self.test_data)
+            train_loss, train_accuracy = self.evaluate(self.train_data, False)
+            val_loss, val_accuracy = self.evaluate(self.test_data, False)
+
+            train_loss_ema, train_accuracy_ema = self.evaluate(self.train_data, True)
+            val_loss_ema, val_accuracy_ema = self.evaluate(self.test_data, True)
 
             # 결과 출력
             print(f'Epoch {epoch}: Train Loss: {train_loss}, Train Accuracy: {train_accuracy}, Validation Loss: {val_loss}, Validation Accuracy: {val_accuracy}')
+            print(f'Epoch {epoch}: Train Loss (ema): {train_loss_ema}, Train Accuracy (ema): {train_accuracy_ema}, Validation Loss (ema): {val_loss_ema}, Validation Accuracy (ema): {val_accuracy_ema}')
 
             # 검증 정확도가 향상될 경우 체크포인트 저장
             if val_accuracy > best_val_accuracy:
@@ -205,9 +221,10 @@ class Stage1Trainer(object):
 
             # WandB 로그 업데이트
             if self.use_wandb:
-                wandb.log({'train/loss': train_loss, 'train/accuracy': train_accuracy, 'validation/loss': val_loss, 'validation/accuracy': val_accuracy})
-      
 
+                wandb.log({'train/loss': train_loss, 'train/accuracy': train_accuracy, 'validation/loss': val_loss, 'validation/accuracy': val_accuracy})
+                wandb.log({'train/loss_ema': train_loss_ema, 'train/accuracy_ema': train_accuracy_ema, 'validation/loss_ema': val_loss_ema, 'validation/accuracy_ema': val_accuracy_ema})
+      
             epoch_end = timeit.default_timer()
 
             print('[info] Epoch {} (Total: {}), elapsed time: {:.4f}'.format(epoch, self.args['epoch'], epoch_end - epoch_start))
@@ -249,11 +266,14 @@ class Stage1Trainer(object):
             self.linear.load_state_dict(checkpoint['linear'])
             self.linear.to('cuda')
 
-        # 다른 상태 정보가 있다면 여기에서 로드
-        # 예: if 'optimizer' in checkpoint: ...
+        if 'model_ema' in checkpoint:
+            self.model_ema.load_state_dict(checkpoint['model_ema'])
+
+        if 'linear_ema' in checkpoint:
+            self.linear_ema.load_state_dict(checkpoint['linear_ema'])
 
         print(f"Loaded checkpoint '{checkpoint_path}'")
 
     def __del__(self) -> None:
-        ...
-        # wandb.finish(0)
+
+        wandb.finish(0)
