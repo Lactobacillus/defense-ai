@@ -30,6 +30,7 @@ def make_video_tensor(video_path, frame_length) -> torch.Tensor:
 
 def video2tensor(
         filename: str,
+        name: str,
         output_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
 
     video, _, _ = tv.io.read_video(filename, output_format = 'TCHW', pts_unit = 'sec')
@@ -57,6 +58,42 @@ def main(args: Dict[str, Any],
     submission = pd.read_csv('/home/elicer/sample_submission.csv')
     test_file_names = submission['path'].tolist()
 
+    # 모델 불러오기
+    model = CustomResNet50().to('cuda')
+    #model = torch.compile(model)
+
+    new_checkpoint = dict()
+    for key, val in checkpoint['model'].items():
+
+        new_checkpoint[key.replace('_orig_mod.', '')] = val
+
+    model.load_state_dict(new_checkpoint)
+
+    aggr = Aggregator().to('cuda')
+    #aggr = torch.compile(aggr)
+    new_checkpoint = dict()
+
+    for key, val in checkpoint['aggr'].items():
+
+        new_checkpoint[key.replace('_orig_mod.', '')] = val
+            
+    aggr.load_state_dict(new_checkpoint)
+
+    model_ema = EMA(model, decay = 0.999)
+    aggr_ema = EMA(aggr, decay = 0.999)
+
+    new_checkpoint = dict()
+    for key, val in checkpoint['model_ema'].items():
+
+        new_checkpoint[key.replace('_orig_mod.', '')] = val
+    model_ema.load_state_dict(new_checkpoint)
+
+    new_checkpoint = dict()
+    for key, val in checkpoint['aggr_ema'].items():
+
+        new_checkpoint[key.replace('_orig_mod.', '')] = val
+    aggr_ema.load_state_dict(new_checkpoint)
+
     preprocess = Preprocess()
 
     logit_dict = dict()
@@ -78,42 +115,6 @@ def main(args: Dict[str, Any],
 
             submission.loc[submission['path'] == test_file_name, 'label'] = 'real'
             continue
-
-        # 모델 불러오기
-        model = CustomResNet50().to('cuda')
-        #model = torch.compile(model)
-
-        new_checkpoint = dict()
-        for key, val in checkpoint['model'].items():
-
-            new_checkpoint[key.replace('_orig_mod.', '')] = val
-
-        model.load_state_dict(new_checkpoint)
-
-        aggr = Aggregator().to('cuda')
-        #aggr = torch.compile(aggr)
-        new_checkpoint = dict()
-
-        for key, val in checkpoint['aggr'].items():
-
-            new_checkpoint[key.replace('_orig_mod.', '')] = val
-                
-        aggr.load_state_dict(new_checkpoint)
-
-        model_ema = EMA(model, decay = 0.999)
-        aggr_ema = EMA(aggr, decay = 0.999)
-
-        new_checkpoint = dict()
-        for key, val in checkpoint['model_ema'].items():
-
-            new_checkpoint[key.replace('_orig_mod.', '')] = val
-        model_ema.load_state_dict(new_checkpoint)
-
-        new_checkpoint = dict()
-        for key, val in checkpoint['aggr_ema'].items():
-
-            new_checkpoint[key.replace('_orig_mod.', '')] = val
-        aggr_ema.load_state_dict(new_checkpoint)
 
         #inference 하기
         video = make_video_tensor(face_video_path, 16)
@@ -138,7 +139,7 @@ def main(args: Dict[str, Any],
 
             logit_dict[test_file_name] = logit.item()
 
-        submission.loc[submission['path'] == test_file_name, 'label'] = 'real' if pred == 1.0 else 'fake'
+        submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred == 1.0 else 'real'
 
     submission.to_csv('/home/elicer/sample_submission_{}.csv'.format(args['name']), index=False)
 
@@ -170,4 +171,4 @@ if __name__ == '__main__':
 
     os.environ['OMP_NUM_THREADS'] = str(opt['omp_num_threads'])
 
-    main(args, checkpoint_file_name = opt['filename'], use_ema=opt['ema'])
+    main(args, checkpoint_file_name = opt['filename'], use_ema=opt['ema'], name = opt['name'])
