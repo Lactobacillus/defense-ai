@@ -27,6 +27,9 @@ args['batch_size'] = 16
 args['lr'] = 1e-4
 args['epoch'] = 100
 
+args['ema_update_freq'] = 100
+args['reset_freq'] = 200
+
 args['use_wandb'] = True
 args['wandb_entity'] = 'lactobacillus_collabo'
 args['wandb_exclude'] = ['use_wandb', 'wandb_entity', 'wandb_exclude', 'device', 'debug', 'result_path']
