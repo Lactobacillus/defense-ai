@@ -229,19 +229,13 @@ class Stage1Trainer(object):
             shrink: float = 0.9,
             perturb: float = 1e-3):
 
-        new_model = CustomResNet50().to('cuda')
-        new_aggr = Aggregator().to('cuda')
-
-        for p1, p2 in zip(*[new_model.parameters(), self.model.parameters()]):
+        for p in self.model.parameters():
             
-            p1.data = copy.deepcopy(shrink * p2.data + perturb * p1.data)
+            p.data = shrink * p + perturb * torch.randn_like(p)
 
-        for p1, p2 in zip(*[new_aggr.parameters(), self.aggr.parameters()]):
+        for p in self.aggr.parameters():
             
-            p1.data = copy.deepcopy(shrink * p2.data + perturb * p1.data)
-
-        self.model = new_model
-        self.aggr = new_aggr
+            p.data = shrink * p + perturb * torch.randn_like(p)
 
     def save_checkpoint(self,
             filename: Optional[str] = None) -> None:
