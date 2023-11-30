@@ -131,7 +131,7 @@ def main(args: Dict[str, Any],
             prob = torch.sigmoid(logit)
             pred = (prob > threshold).float()
 
-        submission.loc[submission['path'] == test_file_name, 'label'] = 'real' if pred == 0.0 else 'fake'
+        submission.loc[submission['path'] == test_file_name, 'label'] = 'real' if pred == 1.0 else 'fake'
 
     submission.to_csv('/home/elicer/sample_submission_test.csv', index=False)
 

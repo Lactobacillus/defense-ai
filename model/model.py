@@ -83,3 +83,30 @@ class Aggregator(nn.Module):
 
         init.xavier_uniform_(self.fc.weight)
         init.zeros_(self.fc.bias)
+
+
+# class Aggregator(nn.Module):
+
+#     def __init__(self,
+#             pool: bool = False) -> None:
+
+#         super(Aggregator, self).__init__()
+
+#         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+#         self.fc = nn.Linear(2048, 1)
+
+#     def forward(self,
+#             x: torch.Tensor) -> torch.Tensor:
+
+#         x = torch.max(x, dim = 1) # (bs, w, h, d)
+#         x = torch.permute(x, (0, 3, 1, 2))
+#         x = self.avgpool(x)
+#         x = torch.flatten(x, 1)
+#         x = self.fc(x)
+
+#         return x
+
+#     def reset_fc(self) -> None:
+
+#         init.xavier_uniform_(self.fc.weight)
+#         init.zeros_(self.fc.bias)
