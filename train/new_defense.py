@@ -41,9 +41,9 @@ class Stage1Trainer(object):
     def build_wandb(self) -> None:
 
         os.makedirs(os.path.join(self.args['result_path'], self.args['exp_name'], 'wandb'), exist_ok = True)
-
-        wandb.init(name = name, project = 'defense-ai', entity = self.args['wandb_entity'],
-                    dir = os.path.join(self.args['result_path'], name),
+        exp_name = self.args.get('exp_name', 'default_name')
+        wandb.init(name = exp_name, project = 'defense-ai', entity = self.args['wandb_entity'],
+                    dir = os.path.join(self.args['result_path'], exp_name),
                     config = self.args, config_exclude_keys = self.args['wandb_exclude'])
 
     def build_dataset(self) -> None:
@@ -110,7 +110,9 @@ class Stage1Trainer(object):
 
                     logit = self.linear(emb)
                     prob = torch.sigmoid(logit)
-                    prob = torch.squeeze(prob, 0)
+                    prob = torch.squeeze(prob, 1)
+
+                    # print(prob.shape, prob, label.shape, label)
 
                     loss = F.binary_cross_entropy_with_logits(prob, label.float())
 

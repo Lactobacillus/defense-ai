@@ -16,7 +16,7 @@ args['result_path'] = os.path.join(home, 'temporary/')
 # args['data_path'] = '/mnt/elice/dataset'
 args['data_path'] = './outputs_video'
 args['frame_length'] = 1
-args['batch_size'] = 1
+args['batch_size'] = 128
 
 args['lr'] = 1e-4
 args['epoch'] = 100
