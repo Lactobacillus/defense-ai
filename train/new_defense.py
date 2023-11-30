@@ -118,12 +118,12 @@ class Stage1Trainer(object):
                 grad_scaler.step(optimizer)
                 grad_scaler.update()
 
-                if idx % self.args['ema_update_freq'] == 0:
+                if idx > 0 and idx % self.args['ema_update_freq'] == 0:
 
                     self.model_ema.update()
                     self.aggr_ema.update()
 
-                if idx % self.args['reset_freq'] == 0:
+                if idx > 0 and idx % self.args['reset_freq'] == 0:
 
                     # self.aggr.reset_fc()
                     self.shrink_perturb()
