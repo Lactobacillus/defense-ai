@@ -4,6 +4,7 @@ from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
 import torch
 import torch.nn as nn
+import torch.nn.init as init
 import torch.nn.functional as F
 
 from torchvision.models import ResNet, resnet50, ResNet50_Weights
@@ -77,3 +78,8 @@ class Aggregator(nn.Module):
         x = self.fc(x)
 
         return x
+
+    def reset_fc(self) -> None:
+
+        init.xavier_uniform_(self.fc.weight)
+        init.zeros_(self.fc.bias)

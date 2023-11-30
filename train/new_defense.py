@@ -117,11 +117,10 @@ class Stage1Trainer(object):
 
                     wandb.log({'train/stage1/loss': loss.item()})
 
-            self.evaluate('train', True)
-            self.evaluate('train', False)
-
             self.save_checkpoint('latest')
             self.save_checkpoint('epoch_{}'.format(epoch))
+            self.evaluate('train', True)
+            self.evaluate('train', False)
 
             epoch_end = timeit.default_timer()
 
@@ -162,7 +161,7 @@ class Stage1Trainer(object):
         correct = 0
         total = 0
 
-        for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
+        for idx, batch in tqdm(enumerate(test_loader), total = len(test_loader)):
 
             video = batch['video'].to('cuda')
             label = batch['label'].float().unsqueeze(-1).to('cuda')

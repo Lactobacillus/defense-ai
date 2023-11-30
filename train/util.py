@@ -43,7 +43,7 @@ class EMA(object):
 
         self.register()
 
-    def register(self):
+    def register(self) -> None:
 
         for name, param in self.model.named_parameters():
 
@@ -51,7 +51,7 @@ class EMA(object):
 
                 self.shadow[name] = param.data.clone()
 
-    def update(self):
+    def update(self) -> None:
 
         for name, param in self.model.named_parameters():
 
@@ -60,7 +60,7 @@ class EMA(object):
                 new_average = (1.0 - self.decay) * param.data + self.decay * self.shadow[name]
                 self.shadow[name] = new_average.clone()
 
-    def apply_shadow(self):
+    def apply_shadow(self) -> None:
 
         for name, param in self.model.named_parameters():
 
@@ -69,7 +69,7 @@ class EMA(object):
                 self.backup[name] = param.data
                 param.data = self.shadow[name]
 
-    def restore(self):
+    def restore(self) -> None:
 
         for name, param in self.model.named_parameters():
 
@@ -81,5 +81,9 @@ class EMA(object):
 
     def state_dict(self):
 
-        return self.shadow.cpu().state_dict()
-        
+        return self.shadow
+
+    def load_state_dict(self,
+            state_dict: Dict[str, torch.Tensor]) -> None:
+
+        self.shadow = state_dict
