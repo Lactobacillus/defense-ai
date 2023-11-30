@@ -117,6 +117,9 @@ class Stage1Trainer(object):
 
                     wandb.log({'train/stage1/loss': loss.item()})
 
+            self.save_checkpoint('latest')
+            self.save_checkpoint('epoch_{}'.format(epoch))
+
             epoch_end = timeit.default_timer()
 
             print('[info] Epoch {} (Total: {}), elapsed time: {:.4f}'.format(epoch, self.args['epoch'], epoch_end - epoch_start))
@@ -131,6 +134,7 @@ class Stage1Trainer(object):
         if not filename: filename = 'checkpoint'
 
         checkpoint = {'model': self.model.cpu().state_dict(),
+                    'aggr': self.aggr.cpu().state_dict(),
                     'args': self.args}
 
         torch.save(checkpoint, os.path.join(self.result_root, '{}.pkl'.format(filename)))
