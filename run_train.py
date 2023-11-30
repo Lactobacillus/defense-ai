@@ -4,12 +4,25 @@ import codecs
 import argparse
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
-from train.defense import Trainer
 
-def main(args: Dict[str, Any]) -> None:
+def main(args: Dict[str, Any],
+        stage: int) -> None:
 
-    trainer = Trainer(args)
-    trainer.train('train')
+    match stage:
+
+        case 1:
+
+            from train.new_defense import Stage1Trainer as Trainer
+
+            trainer = Trainer(args)
+            trainer.train('train')
+
+        case 2:
+
+            from train.new_defense import Stage2Trainer as Trainer
+            
+            trainer = Trainer(args)
+            trainer.train('train')
 
 
 if __name__ == '__main__':
@@ -17,6 +30,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('conf', type = str,
                         help = 'config file')
+    parser.add_argument('--stage', type = int, choices = [1, 2],
+                        help = 'training stage: [1, 2, 3]')
     parser.add_argument('--omp-num-threads', type = int,
                         default = 2,
                         help = 'OMP_NUM_THREADS option')
@@ -26,4 +41,4 @@ if __name__ == '__main__':
 
     os.environ['OMP_NUM_THREADS'] = str(opt['omp_num_threads'])
 
-    main(args)
+    main(args, stage = opt['stage'])
