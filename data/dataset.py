@@ -241,7 +241,7 @@ class TestNumpyDataset(Dataset):
         self.frame_length = frame_length
 
         file_name_list = os.listdir(data_path)
-        self.pair = [(os.path.join(data_path, filename), filename.replace('npy','.mp4')) for filename in file_name_list]
+        self.pair = [(os.path.join(data_path, filename), filename.replace('.npy','.mp4')) for filename in file_name_list]
 
     def __len__(self) -> int:
 
