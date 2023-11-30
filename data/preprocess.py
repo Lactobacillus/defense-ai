@@ -142,6 +142,10 @@ class Preprocess:
         self.dst_video_path = dst_video_path
         self.output_size = (width, height)
 
+        if os.path.exists(dst_video_path):
+            self.print_log(f"{dst_video_path}가 이미 존재해서 face_video 생성을 skip 합니다.")
+            return True
+
         frames = self.video2numpy(extract_frame_num=extract_frame_num)
         self.print_log(f'Original video shape : [{len(frames)}, {frames[0].shape}]')
         faces = self.extract_faces(frames[::2])

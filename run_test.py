@@ -96,7 +96,7 @@ def main(args: Dict[str, Any],
 
         #inference 하기
         with torch.no_grad():
-            video = make_video_numpy(face_video_path, 16)
+            video = make_video_numpy(face_video_path, 64)
             video = torch.tensor(video).to('cuda')
             fl, _, w, h = video.size()
             video = video.view(fl, 3, w, h)
