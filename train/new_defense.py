@@ -17,6 +17,7 @@ from transformers import AutoImageProcessor
 from model.model import CustomResNet50, Aggregator, LinearLayer
 from data.dataset import VideoStage1Data, VideoPretrainData
 from train.util import LossAccumulator
+from sklearn.model_selection import train_test_split
 
 
 class Stage1Trainer(object):
@@ -49,8 +50,13 @@ class Stage1Trainer(object):
 
     def build_dataset(self) -> None:
 
-        self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
-        self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
+        # self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
+        # self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
+        full_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
+        train_size = int(0.8 * len(full_data))
+        test_size = len(full_data) - train_size
+        self.train_data, self.test_data = torch.utils.data.random_split(full_data, [train_size, test_size])
+
 
     def build_model(self) -> None:
 
@@ -63,6 +69,36 @@ class Stage1Trainer(object):
 
         self.linear = LinearLayer().to('cuda')
         #self.linear = torch.compile(self.model)
+
+    def evaluate(self, dataset):
+        self.model.eval()  # 모델을 평가 모드로 설정
+
+        total_loss = 0.0
+        correct_predictions = 0
+        total_samples = 0
+
+        with torch.no_grad():  # 그래디언트 계산 비활성화
+            for batch in DataLoader(dataset, batch_size=self.args['batch_size'], shuffle=False):
+                video = batch['video'].to('cuda')
+                label = batch['label'].float().unsqueeze(-1).to('cuda')
+                bs, fl, _, w, h = video.size()
+                video = video.view(bs * fl, 3, w, h)
+
+                pixel = self.processor(video, return_tensors='pt').pixel_values.to('cuda')
+                emb = self.model(pixel)
+                logit = self.linear(emb)
+                prob = torch.sigmoid(logit)
+
+                loss = F.binary_cross_entropy_with_logits(prob, label)
+                total_loss += loss.item() * video.size(0)
+                predicted = (prob > 0.5).float()  # 예측된 클래스
+                correct_predictions += (predicted == label).sum().item()
+                total_samples += video.size(0)
+
+        avg_loss = total_loss / total_samples
+        accuracy = correct_predictions / total_samples
+
+        return avg_loss, accuracy
 
     def train(self,
             dataset: str = 'train',
@@ -87,8 +123,12 @@ class Stage1Trainer(object):
         optimizer = torch.optim.AdamW(list(self.aggr.parameters()) + list(self.model.parameters()), lr = self.args['lr'])
         grad_scaler = GradScaler()
 
+        # best_val_accuracy가 업데이트될때만 save checkpoint
+        best_val_accuracy = 0.0
         for epoch in range(self.args['epoch']):
-
+            # 이전 에포크의 체크포인트 로드
+            # if epoch > 0:
+            #     self.load_checkpoint('latest')
             self.model.train()
             self.aggr.train()
             epoch_start = timeit.default_timer()
@@ -137,10 +177,30 @@ class Stage1Trainer(object):
                 if self.use_wandb:
                     wandb.log({'train/stage1/loss': loss.item()})
             
+            # 한 에포크 끝
             self.save_checkpoint('latest')
             self.save_checkpoint('epoch_{}'.format(epoch))
+            
+            # 훈련 및 검증 손실과 정확도 계산
+            train_loss, train_accuracy = self.evaluate(self.train_data)
+            val_loss, val_accuracy = self.evaluate(self.test_data)
 
-               
+            if epoch % 2 == 0:
+
+                self.linear.reset_layer()
+
+            # 결과 출력
+            print(f'Epoch {epoch}: Train Loss: {train_loss}, Train Accuracy: {train_accuracy}, Validation Loss: {val_loss}, Validation Accuracy: {val_accuracy}')
+
+            # 검증 정확도가 향상될 경우 체크포인트 저장
+            if val_accuracy > best_val_accuracy:
+                best_val_accuracy = val_accuracy
+                self.save_checkpoint('best_checkpoint')
+
+            # WandB 로그 업데이트
+            if self.use_wandb:
+                wandb.log({'train/loss': train_loss, 'train/accuracy': train_accuracy, 'validation/loss': val_loss, 'validation/accuracy': val_accuracy})
+      
 
             epoch_end = timeit.default_timer()
 
@@ -164,6 +224,28 @@ class Stage1Trainer(object):
         self.linear.to('cuda')
 
         torch.save(checkpoint, os.path.join(self.result_root, '{}.pkl'.format(filename)))
+
+    def load_checkpoint(self, filename: str) -> None:
+        checkpoint_path = os.path.join(self.result_root, f'{filename}.pkl')
+
+        if not os.path.exists(checkpoint_path):
+            print(f"Checkpoint '{checkpoint_path}' not found")
+            return
+
+        checkpoint = torch.load(checkpoint_path)
+
+        if 'model' in checkpoint:
+            self.model.load_state_dict(checkpoint['model'])
+            self.model.to('cuda')
+
+        if 'linear' in checkpoint:
+            self.linear.load_state_dict(checkpoint['linear'])
+            self.linear.to('cuda')
+
+        # 다른 상태 정보가 있다면 여기에서 로드
+        # 예: if 'optimizer' in checkpoint: ...
+
+        print(f"Loaded checkpoint '{checkpoint_path}'")
 
     def __del__(self) -> None:
         ...

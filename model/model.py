@@ -4,6 +4,7 @@ from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
 import torch
 import torch.nn as nn
+import torch.nn.init as init
 import torch.nn.functional as F
 
 from torchvision.models import ResNet, resnet50, ResNet50_Weights
@@ -93,6 +94,11 @@ class LinearLayer(nn.Module):
         x = self.dropout(x)
         x = self.fc2(x)
         return x
+    
+    def reset_layer(self):
+
+        init.xavier_uniform_(self.fc2.weight)
+        init.zeros_(self.fc2.bias)
     
     # def __init__(self,
     #         pool: bool = False) -> None:

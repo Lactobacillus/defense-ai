@@ -11,7 +11,7 @@ home = str(Path.home())
 args = dict()
 
 args['exp_name'] = 'finetune'
-args['result_path'] = os.path.join(home, 'temporary/')
+args['result_path'] = os.path.join(home, 'temporary_reset/')
 
 # args['data_path'] = '/mnt/elice/dataset'
 args['data_path'] = './outputs_video'
