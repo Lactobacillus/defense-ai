@@ -10,10 +10,10 @@ from pathlib import Path
 home = str(Path.home())
 args = dict()
 
-args['exp_name'] = 'stage1'
+args['exp_name'] = 'stage1-valid'
 args['result_path'] = os.path.join(home, 'temporary/')
 
-args['data_path'] = os.path.join(home, 'dataset/only_face')
+args['data_path'] = os.path.join(home, 'dataset/only_face_split')
 args['frame_length'] = 16
 args['batch_size'] = 16
 

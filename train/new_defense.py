@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 import timeit
 import wandb
 import numpy as np
@@ -46,8 +47,15 @@ class Stage1Trainer(object):
 
     def build_dataset(self) -> None:    # 비디오 데이터셋 초기화
 
-        self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
-        self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
+        if 'split' in self.args['data_path']:
+
+            self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'], split = 'train')
+            self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'], split = 'valid')
+
+        else:
+
+            self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'], split = 'train')
+            self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'], split = 'train')
 
     def build_model(self) -> None:  # CustomResNet50, Aggregator 모델 초기화 하고, EMA 적용
 
@@ -57,8 +65,10 @@ class Stage1Trainer(object):
         self.aggr = Aggregator().to('cuda')
         self.aggr = torch.compile(self.aggr)
 
-        self.model_ema = EMA(self.model, decay = 0.999)     # EMA (Exponential Moving Average) : 시계열 데이터의 추세를 부드럽게
-        self.aggr_ema = EMA(self.aggr, decay = 0.999)           # 현재 값에 가중치를 부여하여 이동 평균을 계산
+
+        self.model_ema = EMA(self.model, decay = 0.9)     # EMA (Exponential Moving Average) : 시계열 데이터의 추세를 부드럽게
+        self.aggr_ema = EMA(self.aggr, decay = 0.9)           # 현재 값에 가중치를 부여하여 이동 평균을 계산
+
 
     def train(self,
             dataset: str = 'train',
@@ -72,7 +82,7 @@ class Stage1Trainer(object):
         match dataset:
 
             case 'train': dset = self.train_data
-            case 'test': dset = self.test_data
+            case 'valid': dset = self.test_data
 
         train_loader = DataLoader(dataset = dset,
             batch_size = self.args['batch_size'],   # 한번에 처리되는 데이터 샘플수 
@@ -92,7 +102,7 @@ class Stage1Trainer(object):
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):     # 훈련 데이터로부터 미니배치 가져옴
 
                 video = batch['video'].to('cuda')
-                label = batch['label'].float().unsqueeze(-1).to('cuda')     # 데이터 전처리 (차원을 1로 확장)
+                label = batch['label'].bfloat16().unsqueeze(-1).to('cuda')# 데이터 전처리 (차원을 1로 확장)
                 bs, fl, _, w, h = video.size()
                 video = video.view(bs * fl, 3, w, h)
 
@@ -110,8 +120,16 @@ class Stage1Trainer(object):
                 grad_scaler.step(optimizer)
                 grad_scaler.update()        # 가중치 업데이트
 
-                self.model_ema.update()     # EMA 업데이트
-                self.aggr_ema.update()
+
+                if idx > 0 and idx % self.args['ema_update_freq'] == 0:         # EMA 업데이트
+
+                    self.model_ema.update()
+                    self.aggr_ema.update()
+
+                if idx > 0 and idx % self.args['reset_freq'] == 0:
+
+                    # self.aggr.reset_fc()
+                    self.shrink_perturb()
 
                 if self.use_wandb:
 
@@ -119,6 +137,18 @@ class Stage1Trainer(object):
 
             self.save_checkpoint('latest')      # 체크포인트 저장
             self.save_checkpoint('epoch_{}'.format(epoch))
+
+            if 'split' in self.args['data_path']:
+
+                self.evaluate('train', True, 0.5, 5)
+                self.evaluate('train', False, 0.5, 5)
+                self.evaluate('valid', True, 0.5)
+                self.evaluate('valid', False, 0.5)
+
+            else:
+
+                self.evaluate('train', True, 0.5, 5)
+                self.evaluate('train', False, 0.5, 5)
 
             epoch_end = timeit.default_timer()
 
@@ -131,7 +161,10 @@ class Stage1Trainer(object):
     @torch.no_grad()
     def evaluate(self,
             dataset: str = 'train',
-            use_ema: bool = True) -> None:      
+
+            use_ema: bool = True,
+            threshold: float = 0.5,
+            num_iter: int = 0) -> float:
 
         self.model.eval()
         self.model = self.model.to('cuda')
@@ -141,7 +174,7 @@ class Stage1Trainer(object):
         match dataset:
 
             case 'train': dset = self.train_data
-            case 'test': dset = self.test_data
+            case 'valid': dset = self.test_data
 
         test_loader = DataLoader(dataset = dset,
             batch_size = self.args['batch_size'],
@@ -155,7 +188,14 @@ class Stage1Trainer(object):
             self.model_ema.apply_shadow()
             self.aggr_ema.apply_shadow()
 
-        for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
+        correct = 0
+        total = 0
+
+        for idx, batch in tqdm(enumerate(test_loader), total = len(test_loader)):
+
+            if num_iter > 0 and idx == num_iter:
+
+                break
 
             video = batch['video'].to('cuda')
             label = batch['label'].float().unsqueeze(-1).to('cuda')
@@ -169,11 +209,43 @@ class Stage1Trainer(object):
                 emb = emb.view(bs, fl, d, w, h)
 
                 logit = self.aggr(emb)
+        
+            prob = torch.sigmoid(logit)
+            pred = (prob > threshold).float()
+            correct = correct + (pred == label).sum().item()
+            total = total + label.size(0)
+
+        acc = 100 * correct / total
+
+        if self.use_wandb:
+
+            if use_ema: wandb.log({'train/stage1_{}/acc_ema'.format(dataset): acc})
+            else: wandb.log({'train/stage1_{}/acc'.format(dataset): acc})
 
         if use_ema:
 
             self.model_ema.restore()
             self.aggr_ema.restore()
+
+        return acc
+
+    def shrink_perturb(self,
+            shrink: float = 0.9,
+            perturb: float = 1e-3):
+
+        new_model = CustomResNet50().to('cuda')
+        new_aggr = Aggregator().to('cuda')
+
+        for p1, p2 in zip(*[new_model.parameters(), self.model.parameters()]):
+            
+            p1.data = copy.deepcopy(shrink * p2.data + perturb * p1.data)
+
+        for p1, p2 in zip(*[new_aggr.parameters(), self.aggr.parameters()]):
+            
+            p1.data = copy.deepcopy(shrink * p2.data + perturb * p1.data)
+
+        self.model = new_model
+        self.aggr = new_aggr
 
     def save_checkpoint(self,
             filename: Optional[str] = None) -> None:
@@ -182,6 +254,8 @@ class Stage1Trainer(object):
 
         checkpoint = {'model': self.model.cpu().state_dict(),
                     'aggr': self.aggr.cpu().state_dict(),
+                    'model_ema': self.model_ema.state_dict(),
+                    'aggr_ema': self.aggr_ema.state_dict(),
                     'args': self.args}
 
         torch.save(checkpoint, os.path.join(self.result_root, '{}.pkl'.format(filename)))
@@ -189,3 +263,4 @@ class Stage1Trainer(object):
     def __del__(self) -> None:
 
         wandb.finish(0)
+
