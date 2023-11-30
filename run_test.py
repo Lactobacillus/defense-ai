@@ -8,6 +8,10 @@ import pandas as pd
 import random
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
+import torchvision as tv
+import torchvision.transforms as transforms
+from torchvision.transforms.functional import to_pil_image
+
 from data.preprocess import Preprocess
 from model.model import CustomResNet50, Aggregator
 from data.dataset import VideoStage1Data
@@ -17,8 +21,8 @@ def make_video_tensor(video_path, frame_length) -> torch.Tensor:
     fn = video_path
     video = video2tensor(fn)
 
-    start = random.randrange(0, video.size(0) - self.frame_length - 1)
-    end = start + self.frame_length
+    start = random.randrange(0, video.size(0) - frame_length - 1)
+    end = start + frame_length
     video = video[start:end, ...]
 
     return video
@@ -49,45 +53,70 @@ def main(args: Dict[str, Any],
     checkpoint_file_path = os.path.join(args['result_path'], f'{checkpoint_file_name}.pkl')
     checkpoint = torch.load(checkpoint_file_path)
 
-    submission = pd.read_csv('sample_submission.csv')
+    submission = pd.read_csv('/home/elicer/sample_submission.csv')
     test_file_names = submission['path'].tolist()
 
     preprocess = Preprocess()
 
     for test_file_name in test_file_names:
         # face video 만들기
-        video_path = os.path.join(self.args['data_test_path'], test_file_name)
-        face_video_path = os.path.join(self.args['data_path'], 'test', test_file_name)
+        video_path = os.path.join(args['data_test_path'], test_file_name)
+        face_video_path = os.path.join(args['data_path'], 'test', test_file_name)
 
-        os.makedirs(face_video_path, is_exists=True)
+        #os.makedirs(face_video_path, exist_ok=True)
 
-        suceess = preprocess.make_face_video(src_video_path=video_path, dst_video_path=face_video_path)
+        success = preprocess.make_face_video(src_video_path=video_path, dst_video_path=face_video_path)
 
-        assert success is True
+        #assert success is True, test_file_name
+
+        if not success:
+
+            submission.loc[submission['path'] == test_file_name, 'label'] = 'real'
+            continue
 
         # 모델 불러오기
         model = CustomResNet50().to('cuda')
-        model = torch.compile(model)
-        model.load_state_dict(checkpoint['model'])
+        #model = torch.compile(model)
+
+        new_checkpoint = dict()
+        for key, val in checkpoint['model'].items():
+
+            new_checkpoint[key.replace('_orig_mod.', '')] = val
+
+        model.load_state_dict(new_checkpoint)
 
         aggr = Aggregator().to('cuda')
-        aggr = torch.compile(aggr)
-        aggr.load_state_dict(checkpoint['aggr'])
+        #aggr = torch.compile(aggr)
+        new_checkpoint = dict()
+
+        for key, val in checkpoint['aggr'].items():
+
+            new_checkpoint[key.replace('_orig_mod.', '')] = val
+                
+        aggr.load_state_dict(new_checkpoint)
 
         model_ema = EMA(model, decay = 0.999)
         aggr_ema = EMA(aggr, decay = 0.999)
-        model_ema.load_state_dict(checkpoint['model_ema'])
-        aggr_ema.load_state_dict(checkpoint['aggr_ema'])
+
+        new_checkpoint = dict()
+        for key, val in checkpoint['model_ema'].items():
+
+            new_checkpoint[key.replace('_orig_mod.', '')] = val
+        model_ema.load_state_dict(new_checkpoint)
+
+        new_checkpoint = dict()
+        for key, val in checkpoint['aggr_ema'].items():
+
+            new_checkpoint[key.replace('_orig_mod.', '')] = val
+        aggr_ema.load_state_dict(new_checkpoint)
 
         #inference 하기
-        video = make_video_tensor(face_video_path)
-        bs, fl, _, w, h = video.size()
-        video = video.view(bs * fl, 3, w, h)
+        video = make_video_tensor(face_video_path, 16)
+        fl, _, w, h = video.size()
+        video = video.view(fl, 3, w, h).to('cuda')
         
         model.eval()
         aggr.eval()
-        model_ema.eval()
-        aggr_ema.eval()
 
         if use_ema:
             model_ema.apply_shadow()
@@ -96,15 +125,15 @@ def main(args: Dict[str, Any],
         with torch.no_grad():
             emb = model(video) # (bs * fl, dim, w, h)
             bsfl, d, w, h = emb.size()
-            emb = emb.view(bs, fl, d, w, h)
+            emb = emb.unsqueeze(0)
 
             logit = aggr(emb)
             prob = torch.sigmoid(logit)
             pred = (prob > threshold).float()
 
-        df.loc[df['path'] == test_file_name, 'label'] = 'real' if pred == 0.0 else 'fake'
+        submission.loc[submission['path'] == test_file_name, 'label'] = 'real' if pred == 0.0 else 'fake'
 
-    submission.to_csv('sample_submission_test.csv', index=False)
+    submission.to_csv('/home/elicer/sample_submission_test.csv', index=False)
 
 
 # file 있으면 건너뛰기
