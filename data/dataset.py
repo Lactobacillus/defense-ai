@@ -1,6 +1,7 @@
 import os
 import sys
 import cv2
+import pickle
 import random
 import numpy as np
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable, Iterator, Iterable
@@ -175,7 +176,7 @@ class VideoStage2Data(Dataset):
 
         fn, label = self.pair[idx]
         video = self.video2tensor(fn)
-        slabel = self.soft_label[fn]
+        slabel = self.soft_label[fn.split('/')[-1]]
 
         start = random.randrange(0, video.size(0) - self.frame_length - 1)
         end = start + self.frame_length
@@ -192,8 +193,8 @@ class VideoStage2Data(Dataset):
         transform = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize(output_size),
-            Cutout(2, 16),
             transforms.ToTensor(),
+            Cutout(2, 16),
             transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
         ])
 
