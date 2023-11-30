@@ -89,16 +89,12 @@ def main(args: Dict[str, Any],
     checkpoint = torch.load(checkpoint_file_path)
     submission = pd.read_csv('/home/elicer/sample_submission.csv')
 
-    if args['logits_extract'] is True:
-        preprocess = Preprocess()
-        # face video 만들기
-        process_video(input_folder=os.path.join(args['data_train_path'], 'real'), output_folder=os.path.join(args['data_path'], 'train/real'), preprocess=preprocess)
-        
-        logits_path = os.path.join(args['data_path'], 'train/real/logits')
-        
-        os.makedirs(logits_path, exist_ok=True)
-
-        dset = TestDataset(data_path=os.path.join(args['data_path'], 'train/real/face'), frame_length=args['frame_length'])
+    preprocess = Preprocess()
+    # face video 만들기
+    process_video(input_folder=args['data_test_path'], output_folder=os.path.join(args['data_path'], 'test'), preprocess=preprocess)
+    
+    if args['numpy_data_set'] is False:
+        dset = TestDataset(data_path=os.path.join(args['data_path'], 'test/face'), frame_length=args['frame_length'])
         train_loader = DataLoader(dataset = dset,
                 batch_size = args['batch_size'],
                 shuffle = False,
@@ -106,26 +102,13 @@ def main(args: Dict[str, Any],
                 num_workers = 4,
                 pin_memory = True)
     else:
-        preprocess = Preprocess()
-        # face video 만들기
-        process_video(input_folder=args['data_test_path'], output_folder=os.path.join(args['data_path'], 'test'), preprocess=preprocess)
-        
-        if args['numpy_data_set'] is False:
-            dset = TestDataset(data_path=os.path.join(args['data_path'], 'test/face'), frame_length=args['frame_length'])
-            train_loader = DataLoader(dataset = dset,
-                    batch_size = args['batch_size'],
-                    shuffle = False,
-                    drop_last = False,
-                    num_workers = 4,
-                    pin_memory = True)
-        else:
-            numpydset = TestNumpyDataset(data_path=os.path.join(args['data_path'], 'test/numpy'), frame_length=args['frame_length'])
-            train_loader = DataLoader(dataset = numpydset,
-                    batch_size = args['batch_size'],
-                    shuffle = False,
-                    drop_last = False,
-                    num_workers = 4,
-                    pin_memory = True)
+        numpydset = TestNumpyDataset(data_path=os.path.join(args['data_path'], 'test/numpy'), frame_length=args['frame_length'])
+        train_loader = DataLoader(dataset = numpydset,
+                batch_size = args['batch_size'],
+                shuffle = False,
+                drop_last = False,
+                num_workers = 4,
+                pin_memory = True)
     
     # 모델 불러오기
     processor = AutoImageProcessor.from_pretrained('microsoft/resnet-50')
@@ -150,14 +133,12 @@ def main(args: Dict[str, Any],
 
             logit = linear(emb)
             # torch.size([bs, 1])
-            if args['logits_extract'] is True:
-                save_logits = logit.cpu().numpy()
-                print('save_logits', save_logits)
-                for idx, fn in enumerate(files):
-                    print('save_logits size : ', save_logits[idx].shape)
-                    logits_dict[fn] = save_logits[idx]
-                
-                logit.to('cuda')
+            
+            save_logits = logit.cpu().numpy()
+            for idx, fn in enumerate(files):
+                logits_dict[fn] = float(save_logits[idx, 0])
+            
+            logit.to('cuda')
             
             prob = torch.sigmoid(logit)
             prob = prob.view(bs, fl, 1)
