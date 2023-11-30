@@ -42,7 +42,7 @@ class Stage1Trainer(object):
 
         os.makedirs(os.path.join(self.args['result_path'], self.args['exp_name'], 'wandb'), exist_ok = True)
 
-        wandb.init(name = self.args['exp_name'], project = 'defense-ai', entity = self.args['wandb_entity'],
+        wandb.init(name = self.args['exp_name'], project = 'defense', entity = self.args['wandb_entity'],
                     dir = os.path.join(self.args['result_path'], self.args['exp_name']),
                     config = self.args, config_exclude_keys = self.args['wandb_exclude'])
 
@@ -80,7 +80,7 @@ class Stage1Trainer(object):
             drop_last = False,
             num_workers = 4,
             pin_memory = True)
-        optimizer = torch.optim.AdamW(list(self.aggr.parameters()), lr = self.args['lr'])
+        optimizer = torch.optim.AdamW(list(self.aggr.parameters()) + list(self.model.parameters()), lr = self.args['lr'])
         grad_scaler = GradScaler()
 
         for epoch in range(self.args['epoch']):
@@ -91,7 +91,7 @@ class Stage1Trainer(object):
 
             for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
 
-                video = batch['video']
+                video = batch['video'].to('cuda')
                 label = batch['label'].float().unsqueeze(-1).to('cuda')
                 bs, fl, _, w, h = video.size()
                 video = video.view(bs * fl, 3, w, h)
@@ -115,7 +115,7 @@ class Stage1Trainer(object):
 
                 if self.use_wandb:
 
-                    wandb.log({'train/pretrain': loss.item()})
+                    wandb.log({'train/stage1/loss': loss.item()})
 
             epoch_end = timeit.default_timer()
 
