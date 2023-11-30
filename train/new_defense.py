@@ -14,7 +14,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 from transformers import AutoImageProcessor
 
-from model.model import CustomResNet50, Aggregator, LinearLayer
+from model.model import CustomResNet50, LinearLayer
 from data.dataset import VideoStage1Data, VideoPretrainData
 from train.util import LossAccumulator
 from sklearn.model_selection import train_test_split
@@ -68,6 +68,9 @@ class Stage1Trainer(object):
 
         self.linear = LinearLayer().to('cuda')
         #self.linear = torch.compile(self.model)
+
+        self.model_ema = EMA(self.model, decay = 0.9)
+        self.linear_ema = EMA(self.linear, decay = 0.9)
 
     def evaluate(self, dataset):
         
@@ -162,11 +165,8 @@ class Stage1Trainer(object):
                     pixel = self.processor(video, return_tensors = 'pt').pixel_values.to('cuda')
 #                   print('pixel.shape', pixel.shape) # [1, 3, 244, 244]
                     emb = self.model(pixel) # (bs * fl, dim, w, h)
-#                   print('emb.shape', emb.shape) # ([1, 2048])
-                    # bsfl, d, w, h = emb.size()
-                    # emb = emb.view(bs, fl, d, w, h)
-
                     logit = self.linear(emb)
+
                     loss = F.binary_cross_entropy_with_logits(logit, label)
 
                 optimizer.zero_grad(set_to_none = True)
@@ -223,6 +223,8 @@ class Stage1Trainer(object):
 
         checkpoint = {'model': self.model.cpu().state_dict(),
                       'linear': self.linear.cpu().state_dict(),
+                      'model_ema': self.model_ema.state_dict(),
+                      'linear_ema': self.linear_ema.state_dict(),
                     'args': self.args}
         
         self.model.to('cuda')
