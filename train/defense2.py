@@ -137,7 +137,7 @@ class Stage2Trainer(object):
                     loss = F.binary_cross_entropy_with_logits(logit, label)
                     kd_loss = F.mse_loss(logit, slogit)
 
-                    loss = (1 - args['distillation']) * loss + args['distillation'] * kd_loss
+                    loss = (1 - self.args['distillation']) * loss + self.args['distillation'] * kd_loss
 
                 optimizer.zero_grad(set_to_none = True)
                 grad_scaler.scale(loss).backward()
