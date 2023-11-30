@@ -20,7 +20,7 @@ from train.util import LossAccumulator, EMA
 from sklearn.model_selection import train_test_split
 
 
-class Stage1Trainer(object):
+class ImageStage1Trainer(object):
 
     def __init__(self,
             args: Dict[str, Any]) -> None:

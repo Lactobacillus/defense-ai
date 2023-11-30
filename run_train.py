@@ -6,24 +6,29 @@ from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
 
 def main(args: Dict[str, Any],
-        stage: int) -> None:
+        stage: int, mode: str) -> None:
 
-    match stage:
-
-        case 1:
-
-            from train.new_defense import Stage1Trainer as Trainer
-
-            trainer = Trainer(args)
-            trainer.train('train')
-
-        case 2:
-
+    if mode == 'image':
+        if stage == 1:
+            from train.new_defense import ImageStage1TrainerStage1Trainer as Trainer
+        elif stage == 2:
+            raise ValueError("Unsupported stage for image mode")
+            #from train.new_defense import Stage2Trainer as Trainer
+        else:
+            raise ValueError("Unsupported stage for image mode")
+    elif mode == 'video':
+        if stage == 1:
+            from train.new_defense import Stage1Trainter as Trainer
+        elif stage == 2:
             from train.new_defense import Stage2Trainer as Trainer
-            
-            trainer = Trainer(args)
-            trainer.train('train')
+        else:
+            raise ValueError("Unsupported stage for video mode")
+    else:
+        raise ValueError("Unsupported mode")
 
+    trainer = Trainer(args)
+    trainer.train('train')
+    
 
 if __name__ == '__main__':
 
@@ -32,6 +37,7 @@ if __name__ == '__main__':
                         help = 'config file')
     parser.add_argument('--stage', type = int, choices = [1, 2],
                         help = 'training stage: [1, 2, 3]')
+    parser.add_argument('--mode', type = str, choices = ['image', 'video'])
     parser.add_argument('--omp-num-threads', type = int,
                         default = 2,
                         help = 'OMP_NUM_THREADS option')
@@ -41,4 +47,4 @@ if __name__ == '__main__':
 
     os.environ['OMP_NUM_THREADS'] = str(opt['omp_num_threads'])
 
-    main(args, stage = opt['stage'])
+    main(args, stage = opt['stage'], mode = opt['mode'])
