@@ -98,7 +98,7 @@ class Aggregator(nn.Module):
     def forward(self,
             x: torch.Tensor) -> torch.Tensor:
 
-        x = x.max(1) # (bs, w, h, d)
+        x = torch.max(x, dim = 1)[0] # (bs, w, h, d)
         x = torch.permute(x, (0, 3, 1, 2))
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
