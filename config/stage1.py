@@ -14,6 +14,7 @@ args['exp_name'] = 'stage1'
 args['result_path'] = os.path.join(home, 'temporary/')
 
 args['data_path'] = os.path.join(home, 'dataset/only_face')
+args['data_test_path'] = '/mnt/elice/dataset/test'
 args['frame_length'] = 16
 args['batch_size'] = 16
 
