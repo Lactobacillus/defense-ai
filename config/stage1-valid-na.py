@@ -22,7 +22,7 @@ args['epoch'] = 100
 args['ema_update_freq'] = 50
 args['reset_freq'] = 200
 
-args['use_wandb'] = True
+args['use_wandb'] = False
 args['wandb_entity'] = 'lactobacillus_collabo'
 args['wandb_exclude'] = ['use_wandb', 'wandb_entity', 'wandb_exclude', 'device', 'debug', 'result_path']
 

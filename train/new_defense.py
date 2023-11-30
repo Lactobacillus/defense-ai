@@ -12,10 +12,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torch.cuda.amp import GradScaler, autocast
-
+from transformers import AutoImageProcessor
 from model.model import CustomResNet50, Aggregator
+from model.model_image import CustomResNet50, LinearLayer
 from data.dataset import VideoStage1Data
-from train.util import LossAccumulator
+from train.util import LossAccumulator, EMA
 
 
 class ImageStage1Trainer(object):

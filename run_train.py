@@ -10,7 +10,7 @@ def main(args: Dict[str, Any],
 
     if mode == 'image':
         if stage == 1:
-            from train.new_defense import ImageStage1TrainerStage1Trainer as Trainer
+            from train.new_defense import ImageStage1Trainer as Trainer
         elif stage == 2:
             raise ValueError("Unsupported stage for image mode")
             #from train.new_defense import Stage2Trainer as Trainer
