@@ -233,6 +233,18 @@ class Stage1Trainer(object):
 
             print('[info] Train finished')
 
+    def shrink_perturb(self,
+            shrink: float = 0.9,
+            perturb: float = 1e-3):
+
+        for p in self.model.parameters():
+            
+            p.data = shrink * p + perturb * torch.randn_like(p)
+
+        for p in self.linear.parameters():
+            
+            p.data = shrink * p + perturb * torch.randn_like(p)
+
     def save_checkpoint(self,
             filename: Optional[str] = None) -> None:
 
