@@ -228,3 +228,34 @@ class TestDataset(Dataset):
         video = torch.stack([transform(frame) for frame in video])
 
         return video
+
+# 영상의 numpy를 읽는 것을 배치로
+class TestNumpyDataset(Dataset):
+
+    def __init__(self,
+            data_path: str,
+            frame_length: int = 16,
+            split: str = 'train') -> None:
+
+        self.data_path = data_path
+        self.frame_length = frame_length
+
+        file_name_list = os.listdir(data_path)
+        self.pair = [(os.path.join(data_path, filename), filename.replace('npy','.mp4')) for filename in file_name_list]
+
+    def __len__(self) -> int:
+
+        return len(self.pair)
+
+    def __getitem__(self,
+            idx: int) -> Dict[str, Any]:
+        fn, filename = self.pair[idx]
+        video = np.load(fn)
+        # video = self.video2numpy(fn)
+
+        start = random.randrange(0, video.shape[0] - self.frame_length + 1)
+        end = start + self.frame_length
+        # video = video[start:end, ...]
+        cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
+
+        return {'video': cut, 'file_name': filename}

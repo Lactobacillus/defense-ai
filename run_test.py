@@ -118,7 +118,6 @@ def main(args: Dict[str, Any],
         with torch.no_grad():
             video = batch['video'].to('cuda')
             files = batch['file_name']
-            print(len(files), files)
             bs, fl, _, w, h = video.size()
             video = video.view(bs * fl, 3, w, h)
             pixel = processor(video, return_tensors = 'pt').pixel_values.to('cuda')
