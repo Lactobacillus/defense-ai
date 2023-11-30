@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 import timeit
 import wandb
 import numpy as np
@@ -233,11 +234,11 @@ class Stage1Trainer(object):
 
         for p1, p2 in zip(*[new_model.parameters(), self.model.parameters()]):
             
-            p1.data = deepcopy(shrink * p2.data + perturb * p1.data)
+            p1.data = copy.deepcopy(shrink * p2.data + perturb * p1.data)
 
         for p1, p2 in zip(*[new_aggr.parameters(), self.aggr.parameters()]):
             
-            p1.data = deepcopy(shrink * p2.data + perturb * p1.data)
+            p1.data = copy.deepcopy(shrink * p2.data + perturb * p1.data)
 
         self.model = new_model
         self.aggr = new_aggr
