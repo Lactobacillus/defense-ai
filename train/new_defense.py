@@ -32,11 +32,11 @@ class Stage1Trainer(object):
         if args['use_wandb'] and not args['debug']:
 
             self.use_wandb = True
-            self.build_wandb()
+            self.build_wandb()      
 
         else: self.use_wandb = False
 
-    def build_wandb(self) -> None:
+    def build_wandb(self) -> None:  #WandB 초기화하고 로깅
 
         os.makedirs(os.path.join(self.args['result_path'], self.args['exp_name'], 'wandb'), exist_ok = True)
 
@@ -44,12 +44,12 @@ class Stage1Trainer(object):
                     dir = os.path.join(self.args['result_path'], self.args['exp_name']),
                     config = self.args, config_exclude_keys = self.args['wandb_exclude'])
 
-    def build_dataset(self) -> None:
+    def build_dataset(self) -> None:    # 비디오 데이터셋 초기화
 
         self.train_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
         self.test_data = VideoStage1Data(self.args['data_path'], self.args['frame_length'])
 
-    def build_model(self) -> None:
+    def build_model(self) -> None:  # CustomResNet50, Aggregator 모델 초기화 하고, EMA 적용
 
         self.model = CustomResNet50().to('cuda')
         self.model = torch.compile(self.model)
@@ -57,15 +57,15 @@ class Stage1Trainer(object):
         self.aggr = Aggregator().to('cuda')
         self.aggr = torch.compile(self.aggr)
 
-        self.model_ema = EMA(self.model, decay = 0.999)
-        self.aggr_ema = EMA(self.aggr, decay = 0.999)
+        self.model_ema = EMA(self.model, decay = 0.999)     # EMA (Exponential Moving Average) : 시계열 데이터의 추세를 부드럽게
+        self.aggr_ema = EMA(self.aggr, decay = 0.999)           # 현재 값에 가중치를 부여하여 이동 평균을 계산
 
     def train(self,
             dataset: str = 'train',
             verbose: bool = False) -> None:
 
         self.model.train()
-        self.model = self.model.to('cuda')
+        self.model = self.model.to('cuda')  # to('cuda'): GPU 전송
         self.aggr.train()
         self.aggr = self.aggr.to('cuda')
 
@@ -75,13 +75,13 @@ class Stage1Trainer(object):
             case 'test': dset = self.test_data
 
         train_loader = DataLoader(dataset = dset,
-            batch_size = self.args['batch_size'],
+            batch_size = self.args['batch_size'],   # 한번에 처리되는 데이터 샘플수 
             shuffle = True,
-            drop_last = False,
+            drop_last = False,    # 데이터가 배치 크기로 나누어 떨어지지 않을 때 마지막 배치를 무시할지
             num_workers = 4,
-            pin_memory = True)
-        optimizer = torch.optim.AdamW(list(self.aggr.parameters()) + list(self.model.parameters()), lr = self.args['lr'])
-        grad_scaler = GradScaler()
+            pin_memory = True)      # GPU로 데이터를 효율적으로 전송
+        optimizer = torch.optim.AdamW(list(self.aggr.parameters()) + list(self.model.parameters()), lr = self.args['lr'])   # 가중치 감쇠를 통해 모델의 가중치 정규화
+        grad_scaler = GradScaler()  # Mixed Precision Training 구현, 그래디언트 손실 방지
 
         for epoch in range(self.args['epoch']):
 
@@ -89,40 +89,40 @@ class Stage1Trainer(object):
             self.aggr.train()
             epoch_start = timeit.default_timer()
 
-            for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):
+            for idx, batch in tqdm(enumerate(train_loader), total = len(train_loader)):     # 훈련 데이터로부터 미니배치 가져옴
 
                 video = batch['video'].to('cuda')
-                label = batch['label'].float().unsqueeze(-1).to('cuda')
+                label = batch['label'].float().unsqueeze(-1).to('cuda')     # 데이터 전처리 (차원을 1로 확장)
                 bs, fl, _, w, h = video.size()
                 video = video.view(bs * fl, 3, w, h)
 
-                with autocast(dtype = torch.bfloat16):
+                with autocast(dtype = torch.bfloat16):   # Mixed Precision Training - FP16으로 수행
 
-                    emb = self.model(video) # (bs * fl, dim, w, h)
+                    emb = self.model(video) # (bs * fl, dim, w, h)      # 순전파 수행
                     bsfl, d, w, h = emb.size()
                     emb = emb.view(bs, fl, d, w, h)
 
-                    logit = self.aggr(emb)
-                    loss = F.binary_cross_entropy_with_logits(logit, label)
+                    logit = self.aggr(emb)      # 로짓값 계산
+                    loss = F.binary_cross_entropy_with_logits(logit, label)     # 손실값 계산
 
-                optimizer.zero_grad(set_to_none = True)
+                optimizer.zero_grad(set_to_none = True)     # 역전파 수행
                 grad_scaler.scale(loss).backward()
                 grad_scaler.step(optimizer)
-                grad_scaler.update()
+                grad_scaler.update()        # 가중치 업데이트
 
-                self.model_ema.update()
+                self.model_ema.update()     # EMA 업데이트
                 self.aggr_ema.update()
 
                 if self.use_wandb:
 
-                    wandb.log({'train/stage1/loss': loss.item()})
+                    wandb.log({'train/stage1/loss': loss.item()})   # WandB 로그 기록
 
-            self.save_checkpoint('latest')
+            self.save_checkpoint('latest')      # 체크포인트 저장
             self.save_checkpoint('epoch_{}'.format(epoch))
 
             epoch_end = timeit.default_timer()
 
-            print('[info] Epoch {} (Total: {}), elapsed time: {:.4f}'.format(epoch, self.args['epoch'], epoch_end - epoch_start))
+            print('[info] Epoch {} (Total: {}), elapsed time: {:.4f}'.format(epoch, self.args['epoch'], epoch_end - epoch_start))     # 경과시간 출력   
 
         else:
 
@@ -131,7 +131,7 @@ class Stage1Trainer(object):
     @torch.no_grad()
     def evaluate(self,
             dataset: str = 'train',
-            use_ema: bool = True) -> None:
+            use_ema: bool = True) -> None:      
 
         self.model.eval()
         self.model = self.model.to('cuda')
@@ -150,7 +150,7 @@ class Stage1Trainer(object):
             num_workers = 4,
             pin_memory = True)
 
-        if use_ema:
+        if use_ema:     # EMA 적용
 
             self.model_ema.apply_shadow()
             self.aggr_ema.apply_shadow()
