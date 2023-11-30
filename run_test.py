@@ -6,11 +6,14 @@ import torch
 import numpy as np
 import pandas as pd
 import random
+import cv2
 from typing import List, Dict, Tuple, Set, Union, Optional, Any, Callable
 
 import torchvision as tv
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import to_pil_image
+
+from transformers import AutoImageProcessor
 
 from model.model import CustomResNet50, Aggregator, LinearLayer
 from data.dataset import VideoStage1Data, VideoPretrainData
@@ -21,7 +24,7 @@ def make_video_numpy(video_path, frame_length) -> np.ndarray:
     fn = video_path
     video = video2numpy(fn)
 
-    start = random.randrange(0, video.size(0) - frame_length - 1)
+    start = random.randrange(0, video.shape[0] - frame_length - 1)
     end = start + frame_length
     cut = np.transpose(video[start:end, ...], (0, 3, 1, 2))
 
@@ -93,8 +96,8 @@ def main(args: Dict[str, Any],
 
         #inference 하기
         with torch.no_grad():
-            video = make_video_numpy(face_video_path, 16).to('cuda')
-            print(video.size())
+            video = make_video_numpy(face_video_path, 16)
+            video = torch.tensor(video).to('cuda')
             fl, _, w, h = video.size()
             video = video.view(fl, 3, w, h)
 
@@ -103,9 +106,9 @@ def main(args: Dict[str, Any],
 
             logit = linear(emb)
             prob = torch.sigmoid(logit)
-            pred = (prob > threshold).float()
+            pred = (prob > threshold).float().mean()
 
-        submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred == 0.0 else 'real'
+        submission.loc[submission['path'] == test_file_name, 'label'] = 'fake' if pred < 0.5 else 'real'
 
     submission.to_csv('/home/elicer/sample_submission_test.csv', index=False)
 
